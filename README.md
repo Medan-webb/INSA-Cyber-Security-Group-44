@@ -3,14 +3,20 @@
 
 ## 1. Executive Summary
 The Hybrid Pentest Methodology Builder & Orchestration Platform is a dual-interface solution for penetration testers.  
-It enables both web-based and terminal-based control over testing workflows, combining structured methodologies, automated tool orchestration, and manual testing guidance.
+Its designed for penetration testers to plan, execute, and document security assessments in a structured and repeatable manner.
+It bridges the gap between full automation and manual testing, allowing testers to integrate their preferred tools, commands, and logic while maintaining flexibility for manual intervention.
 
+This hybrid approach:
+- Avoids over-reliance on automation.
+- Preserves the tester’s expertise and decision-making.
+- Ensures consistent reporting and documentation.
+
+Encourages knowledge sharing within teams and the wider pentest community.
 Pentesters can:
 - Design methodologies and manage projects in the web UI.
 - Execute steps in either the web interface or directly from the terminal client.
 - Have all actions — regardless of execution mode — logged and stored for reporting.
 
-This hybrid approach provides maximum flexibility, supporting testers who work in both graphical and command-line environments while ensuring consistent documentation and reporting.
 
 ---
 
