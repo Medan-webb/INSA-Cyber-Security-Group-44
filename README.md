@@ -68,11 +68,7 @@ The platform is an interactive pentest playbook where users can:
   - Proof of Concept (PoC) evidence.
   - Remediation recommendations.
 
-### 4.6 Collaboration
-- Multi-user support with role-based access control.
-- Real-time updates for team-based engagements.
-
-### 4.7 Extensibility
+### 4.6 Extensibility
 - Plugin-based system for adding new tools or methodologies.
 - API for integrating with external platforms (e.g., SIEM, ticketing systems).
 
@@ -83,7 +79,6 @@ The platform is an interactive pentest playbook where users can:
 - Human-centric: Maintains tester decision-making where automation fails.
 - Flexibility: Supports both automated scanning and guided manual testing.
 - Consistency: Ensures methodology-driven, repeatable assessments.
-- Collaboration: Improves teamwork and knowledge sharing.
 - Documentation: Reduces report preparation time with auto-compiled results.
 
 ---
