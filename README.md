@@ -11,9 +11,9 @@ This hybrid approach:
 - Avoids over-reliance on automation.
 - Preserves the tester’s expertise and decision-making.
 - Ensures consistent reporting and documentation.
-- Encourages knowledge sharing within teams and the wider pentest community.
+- Encourages knowledge sharing methodologies within the pentest community.
 
----
+
 
 ## 2. Objectives
 
@@ -24,7 +24,6 @@ This hybrid approach:
 - Generate professional penetration testing reports.
 - Enable plugin-based extensibility for future tools and workflows.
 
----
 
 ## 3. Platform Overview
 
@@ -36,8 +35,6 @@ The platform is an interactive pentest playbook where users can:
 - Run automated commands directly from the interface.
 - Receive instructions for manual steps and record results.
 - Compile all findings into a structured, exportable report.
-
----
 
 ## 4. Core Features
 
@@ -72,7 +69,6 @@ The platform is an interactive pentest playbook where users can:
 - Plugin-based system for adding new tools or methodologies.
 - API for integrating with external platforms (e.g., SIEM, ticketing systems).
 
----
 
 ## 5. Advantages Over Fully Automated Tools
 
@@ -81,7 +77,6 @@ The platform is an interactive pentest playbook where users can:
 - Consistency: Ensures methodology-driven, repeatable assessments.
 - Documentation: Reduces report preparation time with auto-compiled results.
 
----
 
 ## 6. Technology Stack
 
@@ -92,7 +87,6 @@ The platform is an interactive pentest playbook where users can:
 - Reporting Engine: ReportLab / Pandoc for PDF & HTML generation.
 - Storage: AWS S3 or local file storage for evidence files.
 
----
 
 ## 7. Example Workflow
 
