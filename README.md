@@ -11,7 +11,7 @@ This hybrid approach:
 - Avoids over-reliance on automation.
 - Preserves the tester’s expertise and decision-making.
 - Ensures consistent reporting and documentation.
-- Encourages knowledge sharing methodologies within the pentest community.
+- Encourages  sharing methodologies within the pentest community.
 
 
 
@@ -100,7 +100,6 @@ Project: https://target.com
 
 Reporting: System auto-compiles findings into a structured PDF.
 
----
 
 ## 8. Future Expansion
 
@@ -109,7 +108,6 @@ Reporting: System auto-compiles findings into a structured PDF.
 - Integration with bug bounty platforms.
 - Cross-platform support for mobile and tablet usage.
 
----
 
 ## 9. Competitive Landscape
 
