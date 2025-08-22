@@ -1,0 +1,657 @@
+/* Converting from Tailwind to pure CSS with all styling for the pentest methodology builder */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 384px;
+  height: 100vh;
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease-in-out;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    position: static;
+    transform: translateX(0);
+  }
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.header-title h2 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.total-count {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Card Styles */
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(229, 231, 235, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.card-header {
+  padding: 16px 20px 12px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-content {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Input Styles */
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #1e293b;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #1e293b;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.textarea.mono {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+.textarea::placeholder {
+  color: #9ca3af;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button Styles */
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  background: #4b5563;
+  color: white;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: #374151;
+}
+
+.button-black {
+  background: #000000;
+  color: white;
+}
+
+.button-black:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.button-blue {
+  background: #3b82f6;
+  color: white;
+}
+
+.button-blue:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.button-cyan {
+  background: #0891b2;
+  color: white;
+}
+
+.button-cyan:hover:not(:disabled) {
+  background: #0e7490;
+}
+
+.button-green {
+  background: #059669;
+  color: white;
+}
+
+.button-green:hover:not(:disabled) {
+  background: #047857;
+}
+
+.button-red {
+  background: #dc2626;
+  color: white;
+}
+
+.button-red:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.button-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.button-outline {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.button-outline:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.button-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Methodology List */
+.methodology-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.methodology-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.methodology-item:hover {
+  background: #f9fafb;
+}
+
+.methodology-item.selected {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.methodology-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.methodology-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  truncate: true;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 384px;
+  }
+}
+
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+@media (min-width: 1024px) {
+  .mobile-header {
+    display: none;
+  }
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.content {
+  flex: 1;
+  padding: 24px;
+}
+
+.container {
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+/* Methodology Details */
+.methodology-details {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.methodology-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.methodology-title h1 {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+/* Target Input */
+.target-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.target-input .input {
+  flex: 1;
+}
+
+.resolved-ip {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.resolved-ip code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+/* Description */
+.description {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* Commands */
+.commands-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.add-command {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-command .input {
+  flex: 1;
+}
+
+.run-all {
+  margin-bottom: 12px;
+}
+
+.help-text {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.commands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.drag-handle {
+  color: #9ca3af;
+  cursor: grab;
+  font-size: 16px;
+}
+
+.command-text {
+  flex: 1;
+  font-size: 14px;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+.edit-command {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+}
+
+.edit-command .input {
+  flex: 1;
+}
+
+.no-commands {
+  color: #64748b;
+  text-align: center;
+  padding: 24px;
+}
+
+/* Terminal */
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.terminal {
+  background: #000000;
+  color: #22c55e;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 14px;
+  max-height: 256px;
+  overflow-y: auto;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.terminal-result {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 8px;
+}
+
+.terminal-result:last-child {
+  border-bottom: none;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.success {
+  background: #22c55e;
+}
+
+.status-dot.failed {
+  background: #ef4444;
+}
+
+.status-dot.running {
+  background: #eab308;
+}
+
+.command-name {
+  color: #06b6d4;
+}
+
+.status-text {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.result-output {
+  color: #d1d5db;
+  margin-left: 16px;
+  font-size: 12px;
+}
+
+.terminal-empty {
+  text-align: center;
+  padding: 32px;
+  color: #64748b;
+}
+
+.terminal-empty .terminal-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.terminal-empty p {
+  font-size: 14px;
+}
+
+.terminal-empty .help-text {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Dashboard Home */
+.dashboard-home {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.home-header .shield-icon {
+  font-size: 48px;
+}
+
+.dashboard-home h1 {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.home-description {
+  font-size: 18px;
+  color: #64748b;
+  max-width: 512px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+
+.home-instructions {
+  margin-top: 32px;
+}
+
+.home-instructions p {
+  color: #64748b;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+}
+
+.empty-state .shield-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 14px;
+}
+
+/* Icons */
+.shield-icon,
+.plus-icon,
+.globe-icon,
+.file-icon,
+.terminal-icon {
+  font-size: 16px;
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+}
+
+@media (min-width: 1024px) {
+  .overlay {
+    display: none;
+  }
+}
+
+/* Utilities */
+.mono {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
