@@ -3,6 +3,7 @@ import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from utility.news_fetcher import fetch_cyber_news
 
 app = FastAPI()
 
@@ -19,8 +20,9 @@ class CommandRequest(BaseModel):
     command: str
 
 # Start a persistent shell process
+# change cmd.exe(in windows) to bin/bash in linux
 shell = subprocess.Popen(
-    ["/bin/bash"],
+    ["cmd.exe"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
@@ -48,3 +50,8 @@ def run_command(req: CommandRequest):
         return {"output": "\n".join(output)}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/api/news")
+def get_news():
+    """Endpoint for fetching cybersecurity news"""
+    return fetch_cyber_news()
