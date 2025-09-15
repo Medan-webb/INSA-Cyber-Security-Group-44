@@ -393,12 +393,52 @@ ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2 text-gray-800">
-                  <Plus className="h-4 w-4" />
-                  Add New Methodology
-                </CardTitle>
-              </CardHeader>
+<CardHeader className="pb-3">
+  <input
+    type="file"
+    accept=".json"
+    id="methodology-upload"
+    style={{ display: "none" }}
+    onChange={async (e) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const text = await file.text()
+      try {
+        const data = JSON.parse(text)
+        // Support both single methodology and array
+        const methodologiesToAdd = Array.isArray(data)
+          ? data
+          : [data]
+        methodologiesToAdd.forEach((m: any) => {
+          if (m.name && m.description && Array.isArray(m.commands)) {
+            setMethodologies((prev) => [
+              ...prev,
+              {
+                id: Date.now() + Math.floor(Math.random() * 10000),
+                name: m.name,
+                description: m.description,
+                commands: m.commands,
+              },
+            ])
+          }
+        })
+      } catch (err) {
+        alert("Invalid JSON file format.")
+      }
+      // Reset input so same file can be uploaded again
+      (e.target as HTMLInputElement).value = ""
+    }}
+  />
+  <Button
+    type="button"
+    size="sm"
+    className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white"
+    onClick={() => document.getElementById("methodology-upload")?.click()}
+  >
+    <Plus className="h-4 w-4" />
+    Import Methodology from JSON
+  </Button>
+</CardHeader>
               <CardContent className="space-y-3">
                 <Input
                   type="text"

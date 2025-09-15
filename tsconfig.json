@@ -1,4 +1,5 @@
 {
+  // "$schema": "https://www.schemastore.org/tsconfig", // Keep this line commented out to avoid schema loading error
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
