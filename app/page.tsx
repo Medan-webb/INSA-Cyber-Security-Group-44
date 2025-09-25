@@ -117,6 +117,8 @@ export default function PentestMethodologies() {
   const [newMethodologyDescription, setNewMethodologyDescription] = useState("")
   const [newMethodologyCommands, setNewMethodologyCommands] = useState("")
   const [newCommand, setNewCommand] = useState("")
+
+  const apiBase = "http://127.0.0.1:5000";
   const [editingCommandIndex, setEditingCommandIndex] = useState<number | null>(null)
   const [editingCommandText, setEditingCommandText] = useState("")
   const [terminalOutput, setTerminalOutput] = useState<
@@ -155,9 +157,26 @@ export default function PentestMethodologies() {
       setSelectedMethodology(null)
     }
   }
+  async function fetchJSON(url, options) {
+        try {
+          const res = await fetch(url, options);
+          return await res.json();
+        } catch (e) {
+          console.error(e);
+          return null;
+        }
+      }
 
-  const runCommand = (command: string) => {
-    console.log(`Running command: ${command}`)
+  const runCommand = async (command: string) => {
+    console.log(`Running command: ${command}`);
+
+    if (!command) return;
+            const res = await fetchJSON(`${apiBase}/exec`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ command }),
+            });
+            
     const newOutput = {
       command,
       output: `[Command executed successfully - output would appear here]`,
@@ -174,6 +193,7 @@ export default function PentestMethodologies() {
 
     for (let i = 0; i < selectedMethodology.commands.length; i++) {
       const command = selectedMethodology.commands[i]
+      runCommand(command);
 
       // Add running status
       setTerminalOutput((prev) => [
