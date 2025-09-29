@@ -1,19 +1,43 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit } from "lucide-react"
+import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown } from "lucide-react"
+
+import { ManualStepModal } from "./components/ManualStepModal"
+import { ProjectSelector } from "./components/ProjectSelector"
+import Link from "next/link"
+import ReportsPage from "./reports/page"
+
+interface MethodologyStep {
+  id: string
+  type: "command" | "manual"
+  content: string
+  requiresUpload: boolean
+  completed: boolean
+  evidence?: string[]
+}
 
 interface Methodology {
   id: number
   name: string
   description?: string
   commands: string[]
+  steps: MethodologyStep[]
   target?: string
   targetIP?: string
+}
+
+interface Project {
+  id: number
+  name: string
+  target: string
+  targetIP?: string
+  createdAt: string
+  status: "active" | "completed"
 }
 
 const apiBase = "http://127.0.0.1:5000"
@@ -33,30 +57,52 @@ async function fetchJSON(url: string, options?: RequestInit) {
 }
 
 export default function PentestMethodologies() {
+  const shouldStopRef = useRef(false);
+
   const [methodologies, setMethodologies] = useState<Methodology[]>([])
   const [selectedMethodology, setSelectedMethodology] = useState<Methodology | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // add new
+  // Project state
+  const [projects, setProjects] = useState<Project[]>([])
+  const [currentProject, setCurrentProject] = useState<Project | null>(null)
+  const [showProjectSelector, setShowProjectSelector] = useState(false)
+
+  // Add new methodology
   const [newMethodologyName, setNewMethodologyName] = useState("")
   const [newMethodologyDescription, setNewMethodologyDescription] = useState("")
   const [newMethodologyCommands, setNewMethodologyCommands] = useState("")
 
-  // command manipulation
+  // Command manipulation
   const [newCommand, setNewCommand] = useState("")
-  const [editingCommandIndex, setEditingCommandIndex] = useState<number | null>(null)
-  const [editingCommandText, setEditingCommandText] = useState("")
+  const [editingStepId, setEditingStepId] = useState<string | null>(null)
+  const [editingStepContent, setEditingStepContent] = useState("")
 
-  // terminal output
+  // Terminal output
   const [terminalOutput, setTerminalOutput] = useState<
     { command: string; output: string; status: "success" | "failed" | "running" }[]
   >([])
 
   const [isRunningAll, setIsRunningAll] = useState(false)
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [draggedStepId, setDraggedStepId] = useState<string | null>(null)
+
+  const [manualStepModal, setManualStepModal] = useState<{
+    open: boolean;
+    step: MethodologyStep | null;
+  }>({ open: false, step: null })
+  const [executionState, setExecutionState] = useState<{
+    isRunning: boolean;
+    currentStepIndex: number;
+    shouldStop: boolean;
+  }>({ isRunning: false, currentStepIndex: 0, shouldStop: false })
+
+  // Manual step type
+  const [newStepType, setNewStepType] = useState<"command" | "manual">("command")
+  const [newStepContent, setNewStepContent] = useState("")
 
   useEffect(() => {
     loadMethodologies()
+    loadProjects()
   }, [])
 
   async function loadMethodologies() {
@@ -68,20 +114,39 @@ export default function PentestMethodologies() {
     }
   }
 
-  // create new methodology (persist)
+  async function loadProjects() {
+    try {
+      const data = await fetchJSON(`${apiBase}/projects`)
+      setProjects(data || [])
+    } catch (error) {
+      console.error("Failed to load projects", error)
+    }
+  }
+
+  // Create new methodology
   async function addMethodology() {
     if (!newMethodologyName.trim()) return
-    const commandsArray = newMethodologyCommands
+
+    const steps: MethodologyStep[] = newMethodologyCommands
       .split("\n")
       .map((c) => c.trim())
       .filter(Boolean)
-    // create with a temporary id if backend returns nothing
+      .map((command, index) => ({
+        id: `step-${Date.now()}-${index}`,
+        type: "command" as const,
+        content: command,
+        requiresUpload: false,
+        completed: false
+      }))
+
     const payload = {
       id: Date.now(),
       name: newMethodologyName.trim(),
       description: newMethodologyDescription.trim(),
-      commands: commandsArray,
+      steps: steps,
+      commands: steps.filter(s => s.type === "command").map(s => s.content)
     }
+
     try {
       const res = await fetchJSON(`${apiBase}/methodologies`, {
         method: "POST",
@@ -119,192 +184,440 @@ export default function PentestMethodologies() {
       console.error("Update methodology on server failed", e)
     }
   }
+  //  helper function for variable substitution
+  function substituteVariables(command: string, project: Project | null): string {
+    if (!project) return command;
 
-  // run a command one-shot (non-streaming)
-  async function runCommand(command: string) {
-    if (!command) return
-    setTerminalOutput((p) => [...p, { command, output: "Running...", status: "running" }])
+    return command
+      .replace(/\{\{target\}\}/g, project.target)
+      .replace(/\{\{targetIP\}\}/g, project.targetIP || project.target)
+      .replace(/\{\{project\}\}/g, project.name);
+  }
+  // Run command with project context// Run command with project context
+async function runCommand(command: string) {
+  if (!command || !currentProject) {
+    alert("Please select a project first")
+    return
+  }
+  
+  // Substitute variables
+  const substitutedCommand = substituteVariables(command, currentProject);
+  setTerminalOutput((p) => [...p, { command: substitutedCommand, output: "Running...", status: "running" }])
 
-    try {
-      const res = await fetchJSON(`${apiBase}/exec`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command, timeout_sec: 120 }),
-      })
-      const stdout = res.stdout ?? res.stdout ?? ""
-      const rc = res.returncode ?? 0
-      setTerminalOutput((prev) => {
-        const newArr = [...prev]
-        // replace last running for this command
-        const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
-        const outItem = { command, output: stdout || "[no output]", status: rc === 0 ? "success" : "failed" }
-        if (idx >= 0) newArr[idx] = outItem
-        else newArr.push(outItem)
-        return newArr
-      })
-      return { returncode: rc, stdout }
-    } catch (e: any) {
-      setTerminalOutput((prev) => {
-        const newArr = [...prev]
-        const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
-        const outItem = { command, output: `[ERROR] ${e?.message || String(e)}`, status: "failed" as const }
-        if (idx >= 0) newArr[idx] = outItem
-        else newArr.push(outItem)
-        return newArr
-      })
-      return { returncode: -1, stdout: "" }
+  try {
+    const res = await fetchJSON(`${apiBase}/exec`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        command: substitutedCommand,
+        timeout_sec: 120,
+        project_id: currentProject.id,
+        methodology_id: selectedMethodology?.id
+      }),
+    })
+
+    const stdout = res.stdout ?? ""
+    const rc = res.returncode ?? 0
+
+    setTerminalOutput((prev) => {
+      const newArr = [...prev]
+      const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
+      const outItem = { command, output: stdout || "[no output]", status: rc === 0 ? "success" : "failed" }
+      if (idx >= 0) newArr[idx] = outItem
+      else newArr.push(outItem)
+      return newArr
+    })
+
+    // Save successful execution to history
+    const executionRecord = {
+      command: substitutedCommand,
+      output: stdout || "[no output]",
+      status: rc === 0 ? "success" : "failed",
+      timestamp: new Date().toISOString(),
+      project_id: currentProject?.id,
+      methodology_id: selectedMethodology?.id
     }
+
+    const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
+    savedHistory.push(executionRecord)
+    localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
+
+    return { returncode: rc, stdout }
+  } catch (e: any) {
+    const errorMessage = `[ERROR] ${e?.message || String(e)}`
+    
+    setTerminalOutput((prev) => {
+      const newArr = [...prev]
+      const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
+      const outItem = { command, output: errorMessage, status: "failed" as const }
+      if (idx >= 0) newArr[idx] = outItem
+      else newArr.push(outItem)
+      return newArr
+    })
+
+    // Save failed execution to history
+    const executionRecord = {
+      command: substitutedCommand,
+      output: errorMessage,
+      status: "failed",
+      timestamp: new Date().toISOString(),
+      project_id: currentProject?.id,
+      methodology_id: selectedMethodology?.id
+    }
+
+    const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
+    savedHistory.push(executionRecord)
+    localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
+
+    return { returncode: -1, stdout: "" }
+  }
+}
+
+  // Edit step functionality
+  function startEditStep(stepId: string, content: string) {
+    setEditingStepId(stepId)
+    setEditingStepContent(content)
   }
 
-  // run all commands sequentially (await each)
-  async function runAllCommands() {
-    if (!selectedMethodology) return
-    if (selectedMethodology.commands.length === 0) return
-    setIsRunningAll(true)
-    setTerminalOutput([])
+  async function saveEditStep() {
+    if (!selectedMethodology || !editingStepId) return
 
-    for (let i = 0; i < selectedMethodology.commands.length; i++) {
-      const cmd = selectedMethodology.commands[i]
-      // mark running
-      setTerminalOutput((p) => [...p, { command: cmd, output: "Running...", status: "running" }])
-      // run and wait
-      await runCommand(cmd)
-      // small pause so UI updates
-      await new Promise((r) => setTimeout(r, 200))
+    const updatedSteps = selectedMethodology.steps.map(step =>
+      step.id === editingStepId
+        ? { ...step, content: editingStepContent.trim() }
+        : step
+    )
+
+    const updated: Methodology = {
+      ...selectedMethodology,
+      steps: updatedSteps,
+      commands: updatedSteps
+        .filter(step => step.type === "command")
+        .map(step => step.content)
     }
 
-    setIsRunningAll(false)
-  }
-
-  // optionally: use streaming via /exec-stream to get live incremental output
-  // Example helper (not used by default). Keeps SSE connection and appends lines.
-  function runCommandWithStream(command: string) {
-    const evtSource = new EventSource(`${apiBase}/exec-stream`) // note: not passing JSON body; would require a GET variant or custom wrapper
-    // If you want to use SSE with POST you need a small proxy or use fetch + ReadableStream
-    // For simplicity we'll use the one-shot /exec in this version.
-    evtSource.onmessage = (e) => {
-      setTerminalOutput((prev) => {
-        const idx = prev.findIndex((x) => x.command === command)
-        if (idx >= 0) {
-          const copy = [...prev]
-          const next = { ...copy[idx], output: (copy[idx].output || "") + "\n" + e.data }
-          copy[idx] = next
-          return copy
-        }
-        return [...prev, { command, output: e.data, status: "running" }]
-      })
-    }
-    evtSource.onerror = () => evtSource.close()
-  }
-
-  // add a command to the selected methodology and persist
-  async function addCommandToMethodology() {
-    if (!selectedMethodology || !newCommand.trim()) return
-    const updated: Methodology = { ...selectedMethodology, commands: [...selectedMethodology.commands, newCommand.trim()] }
-    // update local state
     setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
     setSelectedMethodology(updated)
-    setNewCommand("")
-    // persist
+    setEditingStepId(null)
+    setEditingStepContent("")
     await updateMethodologyOnServer(updated)
   }
 
-  // delete a command locally + persist
-  async function deleteCommand(methodologyId: number, commandIndex: number) {
-    const m = methodologies.find((x) => x.id === methodologyId)
-    if (!m) return
-    const updated = { ...m, commands: m.commands.filter((_, i) => i !== commandIndex) }
-    setMethodologies((prev) => prev.map((mm) => (mm.id === m.id ? updated : mm)))
-    if (selectedMethodology?.id === m.id) setSelectedMethodology(updated)
-    await updateMethodologyOnServer(updated)
+  function cancelEditStep() {
+    setEditingStepId(null)
+    setEditingStepContent("")
   }
 
-  // edit command
-  function startEditCommand(index: number, command: string) {
-    setEditingCommandIndex(index)
-    setEditingCommandText(command)
+  // Drag and drop reordering for steps
+  function handleDragStart(e: React.DragEvent, stepId: string) {
+    setDraggedStepId(stepId)
+    e.dataTransfer.effectAllowed = "move"
   }
 
-  async function saveEditCommand() {
-    if (!selectedMethodology || editingCommandIndex === null) return
-    const updatedCommands = [...selectedMethodology.commands]
-    updatedCommands[editingCommandIndex] = editingCommandText.trim()
-    const updated: Methodology = { ...selectedMethodology, commands: updatedCommands }
-    setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
-    setSelectedMethodology(updated)
-    setEditingCommandIndex(null)
-    setEditingCommandText("")
-    await updateMethodologyOnServer(updated)
-  }
-
-  function cancelEditCommand() {
-    setEditingCommandIndex(null)
-    setEditingCommandText("")
-  }
-
-  // drag and drop reordering
-  function handleDragStart(e: React.DragEvent, index: number) {
-    setDraggedIndex(index)
-  }
-  async function handleDrop(e: React.DragEvent, dropIndex: number) {
-    e.preventDefault()
-    if (draggedIndex === null || !selectedMethodology) return
-    if (draggedIndex === dropIndex) return
-    const cmds = [...selectedMethodology.commands]
-    const [moved] = cmds.splice(draggedIndex, 1)
-    cmds.splice(dropIndex, 0, moved)
-    const updated: Methodology = { ...selectedMethodology, commands: cmds }
-    setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
-    setSelectedMethodology(updated)
-    setDraggedIndex(null)
-    await updateMethodologyOnServer(updated)
-  }
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
   }
 
-  async function exportToJSON() {
-    const exportData = {
-      methodologies,
-      exportDate: new Date().toISOString(),
-      version: "1.0",
-    }
-    const dataStr = JSON.stringify(exportData, null, 2)
-    const blob = new Blob([dataStr], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "pentest-methodologies.json"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
+  async function handleDrop(e: React.DragEvent, dropStepId: string) {
+    e.preventDefault()
+    if (!draggedStepId || !selectedMethodology || draggedStepId === dropStepId) return
 
-  async function resolveIP() {
-    if (!selectedMethodology || !selectedMethodology.target) return
-    // naive local mock: resolve using fetch to a public DNS service would be possible; for now generate mock
-    const mock = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
-    const updated = { ...selectedMethodology, targetIP: mock }
-    setSelectedMethodology(updated)
+    const steps = [...selectedMethodology.steps]
+    const draggedIndex = steps.findIndex(step => step.id === draggedStepId)
+    const dropIndex = steps.findIndex(step => step.id === dropStepId)
+
+    if (draggedIndex === -1 || dropIndex === -1) return
+
+    const [movedStep] = steps.splice(draggedIndex, 1)
+    steps.splice(dropIndex, 0, movedStep)
+
+    const updated: Methodology = { ...selectedMethodology, steps }
     setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+    setSelectedMethodology(updated)
+    setDraggedStepId(null)
     await updateMethodologyOnServer(updated)
+  }
+
+  // Move step up/down
+  async function moveStep(stepId: string, direction: 'up' | 'down') {
+    if (!selectedMethodology) return
+
+    const steps = [...selectedMethodology.steps]
+    const currentIndex = steps.findIndex(step => step.id === stepId)
+
+    if (direction === 'up' && currentIndex > 0) {
+      [steps[currentIndex], steps[currentIndex - 1]] = [steps[currentIndex - 1], steps[currentIndex]]
+    } else if (direction === 'down' && currentIndex < steps.length - 1) {
+      [steps[currentIndex], steps[currentIndex + 1]] = [steps[currentIndex + 1], steps[currentIndex]]
+    } else {
+      return
+    }
+
+    const updated: Methodology = { ...selectedMethodology, steps }
+    setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+    setSelectedMethodology(updated)
+    await updateMethodologyOnServer(updated)
+  }
+
+
+
+
+  async function runAllSteps() {
+    if (!selectedMethodology || !currentProject) {
+      alert("Please select both a project and a methodology")
+      return
+    }
+
+    // Reset the stop flag
+    shouldStopRef.current = false;
+    setExecutionState({ isRunning: true, currentStepIndex: 0, shouldStop: false })
+    setTerminalOutput([])
+
+    for (let i = 0; i < selectedMethodology.steps.length; i++) {
+      // Check the ref instead of state
+      if (shouldStopRef.current) {
+        setTerminalOutput(prev => [...prev, {
+          command: "Execution stopped by user",
+          output: "Process was manually stopped",
+          status: "failed"
+        }])
+        break
+      }
+
+      setExecutionState(prev => ({ ...prev, currentStepIndex: i }))
+      const step = selectedMethodology.steps[i]
+
+      if (step.type === "manual") {
+        setTerminalOutput(prev => [...prev, {
+          command: `MANUAL STEP: ${step.content}`,
+          output: "Waiting for manual completion...",
+          status: "running"
+        }])
+
+        await new Promise<void>(resolve => {
+          setManualStepModal({ open: true, step })
+          const checkCompletion = setInterval(() => {
+            const updatedStep = selectedMethodology.steps.find(s => s.id === step.id)
+            if (updatedStep?.completed || shouldStopRef.current) {
+              clearInterval(checkCompletion)
+              resolve()
+            }
+          }, 500)
+        })
+
+        if (shouldStopRef.current) {
+          setTerminalOutput(prev => [...prev, {
+            command: `MANUAL STEP CANCELLED: ${step.content}`,
+            output: "Execution was stopped",
+            status: "failed"
+          }])
+          break
+        }
+
+        setTerminalOutput(prev => [...prev, {
+          command: `MANUAL STEP COMPLETED: ${step.content}`,
+          output: "Manual step evidence uploaded",
+          status: "success"
+        }])
+      } else {
+        setTerminalOutput(prev => [...prev, {
+          command: step.content,
+          output: "Running...",
+          status: "running"
+        }])
+
+        await runCommand(step.content)
+      }
+
+      if (shouldStopRef.current) break;
+
+      await new Promise(r => setTimeout(r, 500))
+    }
+
+    setExecutionState({ isRunning: false, currentStepIndex: 0, shouldStop: false })
+    shouldStopRef.current = false;
+  }
+
+  function stopExecution() {
+    shouldStopRef.current = true;
+    setExecutionState(prev => ({ ...prev, shouldStop: true, isRunning: false }))
+    setIsRunningAll(false)
+
+    setTerminalOutput(prev => [...prev, {
+      command: "STOP SIGNAL SENT",
+      output: "Stopping execution after current step completes...",
+      status: "failed"
+    }])
+  }
+
+  // Manual step completion handler
+  function handleManualStepComplete(stepId: string, evidencePath: string) {
+    setMethodologies(prev => prev.map(methodology => {
+      if (methodology.id === selectedMethodology?.id) {
+        return {
+          ...methodology,
+          steps: methodology.steps.map(step =>
+            step.id === stepId
+              ? { ...step, completed: true, evidence: [...(step.evidence || []), evidencePath] }
+              : step
+          )
+        }
+      }
+      return methodology
+    }))
+
+    setSelectedMethodology(prev => prev ? {
+      ...prev,
+      steps: prev.steps.map(step =>
+        step.id === stepId
+          ? { ...step, completed: true, evidence: [...(step.evidence || []), evidencePath] }
+          : step
+      )
+    } : null)
+
+    setManualStepModal({ open: false, step: null })
+  }
+
+  // Add step to methodology
+  async function addStepToMethodology() {
+    if (!selectedMethodology || !newStepContent.trim()) return
+
+    const newStep: MethodologyStep = {
+      id: `step-${Date.now()}`,
+      type: newStepType,
+      content: newStepContent.trim(),
+      requiresUpload: newStepType === "manual",
+      completed: false
+    }
+
+    const updated: Methodology = {
+      ...selectedMethodology,
+      steps: [...selectedMethodology.steps, newStep]
+    }
+
+    if (newStepType === "command") {
+      updated.commands = [...selectedMethodology.commands, newStepContent.trim()]
+    }
+
+    setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+    setSelectedMethodology(updated)
+    setNewStepContent("")
+    setNewStepType("command")
+
+    await updateMethodologyOnServer(updated)
+  }
+
+  // Delete step
+  async function deleteStep(stepId: string) {
+    if (!selectedMethodology) return
+
+    const stepToDelete = selectedMethodology.steps.find(s => s.id === stepId)
+    const updatedSteps = selectedMethodology.steps.filter(s => s.id !== stepId)
+
+    const updated: Methodology = {
+      ...selectedMethodology,
+      steps: updatedSteps
+    }
+
+    if (stepToDelete?.type === "command") {
+      updated.commands = selectedMethodology.commands.filter(cmd => cmd !== stepToDelete.content)
+    }
+
+    setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+    setSelectedMethodology(updated)
+    await updateMethodologyOnServer(updated)
+  }
+
+  // Project creation handler
+  async function handleProjectCreate(projectData: { name: string; target: string }) {
+    try {
+      const project = {
+        ...projectData,
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        status: "active" as const,
+        client: "", // Add required fields for backend
+        scope: "",  // Add required fields for backend
+        targetIP: "" // Initialize targetIP
+      }
+
+      const response = await fetchJSON(`${apiBase}/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(project)
+      })
+
+      const createdProject = response.project || project
+      setProjects(prev => [...prev, createdProject])
+      setCurrentProject(createdProject)
+      setShowProjectSelector(false)
+
+    } catch (error) {
+      console.error("Project creation failed", error)
+      alert("Failed to create project. Check the console for details.")
+    }
+  }
+
+  // Project selection handler
+  function handleProjectSelect(project: Project) {
+    setCurrentProject(project)
+    setShowProjectSelector(false)
+  }
+
+  // Update project target
+  async function updateProjectTarget(projectId: number, target: string) {
+    try {
+      const updatedProject = { ...currentProject, target }
+      setCurrentProject(updatedProject)
+      setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p))
+
+      await fetchJSON(`${apiBase}/projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedProject)
+      })
+    } catch (error) {
+      console.error("Failed to update project target", error)
+    }
   }
 
   function clearTerminalOutput() {
     setTerminalOutput([])
   }
 
-  // update methodology metadata on save
   async function saveMethodologyChanges(m: Methodology) {
     setMethodologies((prev) => prev.map((x) => (x.id === m.id ? m : x)))
     await updateMethodologyOnServer(m)
   }
 
+  async function exportToJSON() {
+    if (!selectedMethodology) return
+
+    const data = {
+      methodology: selectedMethodology,
+      project: currentProject,
+      exportDate: new Date().toISOString()
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${selectedMethodology.name.replace(/\s+/g, '_')}_${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
+
+
     <div className="h-screen bg-background flex overflow-hidden">
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
+      {/* Sidebar */}
       <div className={`fixed lg:static lg:h-screen inset-y-0 left-0 z-50 w-96 bg-white border-r transform transition-transform duration-200 ease-in-out overflow-hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-gray-200">
@@ -314,53 +627,142 @@ export default function PentestMethodologies() {
             </div>
             <p className="text-sm text-gray-600">Manage your pentest workflows</p>
           </div>
-           <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-              <CardHeader className="pb-3"><CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle></CardHeader>
-              <CardContent>
-                {methodologies.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500"><Shield className="h-8 w-8 mx-auto mb-3 opacity-50" /><p className="text-sm">No methodologies yet</p></div>
-                ) : (
-                  <div className="space-y-3">
-                    {methodologies.map((methodology) => (
-                      <div key={methodology.id} className={`border rounded-lg p-3 transition-colors cursor-pointer ${selectedMethodology?.id === methodology.id ? "bg-gray-100 border-gray-300" : "bg-white border-gray-200 hover:bg-gray-50"}`} onClick={() => setSelectedMethodology(methodology)}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                            <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+
+          {/* Current Project Display */}
+          {currentProject && (
+            <Card className="m-4 shadow-lg border-2 border-green-200 bg-green-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FolderOpen className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-green-800">Current Project</h3>
+                </div>
+                <p className="text-sm font-medium text-green-700">{currentProject.name}</p>
+                <p className="text-xs text-green-600">Target: {currentProject.target}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full text-green-700 border-green-300 hover:bg-green-100"
+                  onClick={() => setShowProjectSelector(true)}
+                >
+                  Change Project
+                </Button>
               </CardContent>
             </Card>
+          )}
 
-        
+          {/* Methodologies List */}
+          <Card className="mx-4 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {methodologies.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <Shield className="h-8 w-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No methodologies yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {methodologies.map((methodology) => (
+                    <div
+                      key={methodology.id}
+                      className={`border rounded-lg p-3 transition-colors cursor-pointer ${selectedMethodology?.id === methodology.id
+                        ? "bg-gray-100 border-gray-300"
+                        : "bg-white border-gray-200 hover:bg-gray-50"
+                        }`}
+                      onClick={() => setSelectedMethodology(methodology)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                          <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="p-4 border-t border-gray-200"><div className="text-xs text-gray-500 text-center">Total: {methodologies.length} methodologies</div></div>
+          <div className="p-4 border-t border-gray-200">
+            <div className="text-xs text-gray-500 text-center">Total: {methodologies.length} methodologies</div>
+          </div>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="lg:hidden flex items-center justify-between p-4 border-b bg-card">
-          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
           <h1 className="font-semibold">Pentest Dashboard</h1>
           <div className="w-9" />
         </div>
 
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="max-w-4xl mx-auto">
-            {selectedMethodology ? (
+            {!currentProject ? (
+              // Project Selection View
+              <div className="text-center space-y-6">
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <FolderOpen className="h-12 w-12 text-primary" />
+                </div>
+                <h1 className="text-4xl font-bold mb-2">Select a Project</h1>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  Choose an existing project or create a new one to start your penetration testing workflow.
+                </p>
+
+                <ProjectSelector
+                  currentProject={currentProject}
+                  onProjectSelect={handleProjectSelect}
+                  onProjectCreate={handleProjectCreate}
+                />
+              </div>
+            ) : selectedMethodology ? (
+              // Methodology Execution View
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedMethodology(null)} className="flex items-center gap-2"><Shield className="h-4 w-4" />Back to Dashboard</Button>
-                  <div className="flex gap-2">
-                    <Button onClick={exportToJSON} size="sm" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"><Download className="h-4 w-4" />Export JSON</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedMethodology(null)}>
+                    <Shield className="h-4 w-4" />Back to Dashboard
+                  </Button>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      Project: <span className="font-semibold text-green-600">{currentProject.name}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowProjectSelector(true)}
+                    >
+                      <FolderOpen className="h-4 w-4 mr-2" />
+                      Change
+                    </Button>
                   </div>
+
+                  <div className="flex gap-2">
+
+                    <Link href="/reports">
+                      <FileText className="h-4 w-4" />
+                      Reports
+                    </Link>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={exportToJSON} size="sm">
+                      <Download className="h-4 w-4" />Export JSON
+                    </Button>
+                  </div>
+
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -371,78 +773,230 @@ export default function PentestMethodologies() {
                   </div>
                 </div>
 
+                {/* Project Target */}
                 <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader><CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" />Target</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Project Target
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent>
                     <div className="flex gap-2 mb-2">
-                      <Input placeholder="Enter target (e.g., google.com)" value={selectedMethodology.target || ""} onChange={(e) => { const updated = { ...selectedMethodology, target: e.target.value }; setSelectedMethodology(updated); setMethodologies((prev) => prev.map((m) => (m.id === updated.id ? updated : m))) }} className="flex-1" />
-                      <Button onClick={resolveIP} disabled={!selectedMethodology.target} size="sm" className="bg-cyan-600 hover:bg-cyan-700">Resolve IP</Button>
+                      <Input
+                        placeholder="Enter target (e.g., google.com)"
+                        value={currentProject.target}
+                        onChange={(e) => updateProjectTarget(currentProject.id, e.target.value)}
+                        className="flex-1"
+                      />
                     </div>
-                    {selectedMethodology.targetIP && <p className="text-sm text-muted-foreground">Resolved IP: <code className="bg-muted px-2 py-1 rounded">{selectedMethodology.targetIP}</code></p>}
-                    <div className="mt-2 flex gap-2">
-                      <Button size="sm" onClick={() => saveMethodologyChanges(selectedMethodology)} className="bg-green-600 hover:bg-green-700">Save</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Description</CardTitle></CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">{selectedMethodology.description || "No description provided."}</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader><CardTitle className="flex items-center gap-2">
-  <Terminal className="h-5 w-5" />
-  Commands ({selectedMethodology?.commands?.length ?? 0})
-</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="border-b pb-4">
-                      <div className="flex gap-2 mb-3">
-                        <Input placeholder="Enter new command, use {{TARGET}} {{TARGET_IP}} {{USERNAME}} {{PASSWORD}}" value={newCommand} onChange={(e) => setNewCommand(e.target.value)} className="font-mono text-sm flex-1" />
-                        <Button onClick={addCommandToMethodology} disabled={!newCommand.trim()} size="sm" className="bg-cyan-600 hover:bg-cyan-700">Add Command</Button>
-                      </div>
-
-                      {selectedMethodology?.commands?.length > 0 && (
-                        <Button onClick={runAllCommands} disabled={isRunningAll} className="bg-cyan-600 hover:bg-cyan-700 mb-3">{isRunningAll ? "Running..." : "Run All Commands Step-by-Step"}</Button>
-                      )}
-                      <p className="text-xs text-muted-foreground">Press Ctrl+Enter to add quickly</p>
-                    </div>
-
-                    {selectedMethodology?.commands?.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedMethodology.commands.map((command, index) => (
-                          <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border" draggable onDragStart={(e) => handleDragStart(e, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, index)}>
-                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                            {editingCommandIndex === index ? (
-                              <div className="flex-1 flex gap-2">
-                                <Input value={editingCommandText} onChange={(e) => setEditingCommandText(e.target.value)} className="font-mono text-sm" onKeyDown={(e) => { if (e.key === "Enter") saveEditCommand(); if (e.key === "Escape") cancelEditCommand() }} />
-                                <Button size="sm" onClick={saveEditCommand} className="bg-green-600 hover:bg-green-700">Save</Button>
-                                <Button size="sm" variant="outline" onClick={cancelEditCommand}>Cancel</Button>
-                              </div>
-                            ) : (
-                              <>
-                                <code className="flex-1 text-sm font-mono">{command}</code>
-                                <Button size="sm" onClick={() => runCommand(command)} className="flex-shrink-0 bg-black hover:bg-green-600 text-white">Run</Button>
-                                <Button size="sm" onClick={() => startEditCommand(index, command)} className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 text-white"><Edit className="h-4 w-4" /></Button>
-                                <Button variant="destructive" size="sm" onClick={() => deleteCommand(selectedMethodology.id, index)} className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="h-4 w-4" /></Button>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">No commands added yet.</p>
+                    {currentProject.targetIP && (
+                      <p className="text-sm text-muted-foreground">
+                        Resolved IP: <code className="bg-muted px-2 py-1 rounded">{currentProject.targetIP}</code>
+                      </p>
                     )}
                   </CardContent>
                 </Card>
 
+                {/* Steps Management */}
+                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Terminal className="h-5 w-5" />
+                      Steps ({selectedMethodology.steps?.length || 0})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Add Step Form */}
+                    <div className="border-b pb-4">
+                      <div className="flex gap-2 mb-3">
+                        <select
+                          value={newStepType}
+                          onChange={(e) => setNewStepType(e.target.value as "command" | "manual")}
+                          className="border rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="command">Command</option>
+                          <option value="manual">Manual Step</option>
+                        </select>
+                        <Input
+                          placeholder={
+                            newStepType === "command"
+                              ? "Enter command..."
+                              : "Describe manual step..."
+                          }
+                          value={newStepContent}
+                          onChange={(e) => setNewStepContent(e.target.value)}
+                          className="font-mono text-sm flex-1"
+                        />
+                        <Button
+                          onClick={addStepToMethodology}
+                          disabled={!newStepContent.trim()}
+                          size="sm"
+                          className="bg-cyan-600 hover:bg-cyan-700"
+                        >
+                          Add Step
+                        </Button>
+                      </div>
+
+                      {/* Execution Controls */}
+                      {selectedMethodology.steps?.length > 0 && (
+                        <div className="flex gap-2 mb-3">
+                          <Button
+                            onClick={runAllSteps}
+                            disabled={executionState.isRunning}
+                            className="bg-cyan-600 hover:bg-cyan-700"
+                          >
+                            {executionState.isRunning ? "Running..." : "Run All Steps"}
+                          </Button>
+                          {executionState.isRunning && (
+                            <Button
+                              onClick={stopExecution}
+                              variant="outline"
+                              className="bg-red-600 hover:bg-red-700 text-white border-red-700"
+                            >
+                              ⏹️ Stop Execution
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Steps List */}
+                    {selectedMethodology.steps?.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedMethodology.steps.map((step, index) => (
+                          <div
+                            key={step.id}
+                            className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''
+                              }`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, step.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, step.id)}
+                          >
+                            {/* Drag Handle */}
+                            <div className="cursor-move text-gray-400 hover:text-gray-600">
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+
+                            {/* Completion Indicator */}
+                            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
+
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
+                                  }`}>
+                                  {step.type}
+                                </span>
+
+                                {editingStepId === step.id ? (
+                                  <div className="flex-1 flex gap-2">
+                                    <Input
+                                      value={editingStepContent}
+                                      onChange={(e) => setEditingStepContent(e.target.value)}
+                                      className="font-mono text-sm flex-1"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') saveEditStep()
+                                        if (e.key === 'Escape') cancelEditStep()
+                                      }}
+                                    />
+                                    <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEditStep}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <code className="text-sm font-mono flex-1">{step.content}</code>
+                                )}
+                              </div>
+                              {step.evidence && step.evidence.length > 0 && (
+                                <div className="text-xs text-gray-600">
+                                  Evidence: {step.evidence.join(', ')}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1">
+                              {/* Move Buttons */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveStep(step.id, 'up')}
+                                disabled={index === 0}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveStep(step.id, 'down')}
+                                disabled={index === selectedMethodology.steps.length - 1}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </Button>
+
+                              {/* Edit Button */}
+                              {editingStepId !== step.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEditStep(step.id, step.content)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              )}
+
+                              {/* Run Button (for commands) */}
+                              {step.type === "command" && editingStepId !== step.id && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => runCommand(step.content)}
+                                  className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                >
+                                  Run
+                                </Button>
+                              )}
+
+                              {/* Delete Button */}
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteStep(step.id)}
+                                className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No steps added yet.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Terminal Results */}
                 <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2"><Terminal className="h-5 w-5" />Terminal Results</CardTitle>
-                      {terminalOutput.length > 0 && <Button size="sm" variant="outline" onClick={clearTerminalOutput}>Clear</Button>}
+                      <CardTitle className="flex items-center gap-2">
+                        <Terminal className="h-5 w-5" />
+                        Terminal Results
+                      </CardTitle>
+                      {terminalOutput.length > 0 && (
+                        <Button size="sm" variant="outline" onClick={clearTerminalOutput}>
+                          Clear
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -451,11 +1005,18 @@ export default function PentestMethodologies() {
                         terminalOutput.map((result, idx) => (
                           <div key={idx} className="mb-3 border-b border-gray-700 pb-2 last:border-b-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`w-2 h-2 rounded-full ${result.status === "success" ? "bg-green-400" : result.status === "failed" ? "bg-red-400" : "bg-yellow-400"}`} />
+                              <span className={`w-2 h-2 rounded-full ${result.status === "success" ? "bg-green-400" :
+                                result.status === "failed" ? "bg-red-400" : "bg-yellow-400"
+                                }`} />
                               <span className="text-cyan-400">{result.command}</span>
-                              <span className="ml-auto text-xs text-gray-400 animate-pulse">{result.status === "success" ? "Success" : result.status === "failed" ? "Failed" : "Running"}</span>
+                              <span className="ml-auto text-xs text-gray-400 animate-pulse">
+                                {result.status === "success" ? "Success" :
+                                  result.status === "failed" ? "Failed" : "Running"}
+                              </span>
                             </div>
-                            <div className="text-gray-300 ml-4 text-xs whitespace-pre-wrap">{result.output}</div>
+                            <div className="text-gray-300 ml-4 text-xs whitespace-pre-wrap">
+                              {result.output}
+                            </div>
                           </div>
                         ))
                       ) : (
@@ -470,59 +1031,80 @@ export default function PentestMethodologies() {
                 </Card>
               </div>
             ) : (
-              <div className="text-center space-y-4">
+              // Dashboard View (Project selected, no methodology)
+              <div className="text-center space-y-6">
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <Shield className="h-12 w-12 text-primary" />
                 </div>
                 <h1 className="text-4xl font-bold mb-2">Pentest Methodology Builder</h1>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">A collaborative platform for designing and executing penetration testing workflows.</p>
-                
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2 text-gray-800"><Plus className="h-4 w-4" />Add New Methodology</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input placeholder="Methodology name..." value={newMethodologyName} onChange={(e) => setNewMethodologyName(e.target.value)} className="text-sm bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500" />
-                <Textarea placeholder="Description..." value={newMethodologyDescription} onChange={(e) => setNewMethodologyDescription(e.target.value)} className="text-sm min-h-[60px] resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500" />
-                <Textarea placeholder="Commands (one per line)" value={newMethodologyCommands} onChange={(e) => setNewMethodologyCommands(e.target.value)} className="text-sm min-h-[80px] font-mono resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500" />
-                <Button onClick={addMethodology} disabled={!newMethodologyName.trim()} size="sm" className="w-full bg-gray-600 hover:bg-gray-700 text-white"><Plus className="h-3 w-3 mr-2" />Add Methodology</Button>
-                <p className="text-xs text-gray-500">Press Ctrl+Enter to add quickly</p>
-              </CardContent>
-            </Card>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  Select a methodology from the sidebar to start your penetration testing workflow for project:
+                  <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
+                </p>
+                <ReportsPage/>
 
-            <div className="mt-8"><p className="text-muted-foreground">Select a methodology from the sidebar to view its details and commands.</p></div>
-
-            <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-              <CardHeader className="pb-3"><CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle></CardHeader>
-              <CardContent>
-                {methodologies.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500"><Shield className="h-8 w-8 mx-auto mb-3 opacity-50" /><p className="text-sm">No methodologies yet</p></div>
-                ) : (
-                  <div className="space-y-3">
-                    {methodologies.map((methodology) => (
-                      <div key={methodology.id} className={`border rounded-lg p-3 transition-colors cursor-pointer ${selectedMethodology?.id === methodology.id ? "bg-gray-100 border-gray-300" : "bg-white border-gray-200 hover:bg-gray-50"}`} onClick={() => setSelectedMethodology(methodology)}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                            <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                {/* Add New Methodology Card */}
+                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2 text-gray-800">
+                      <Plus className="h-4 w-4" />Add New Methodology
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Input
+                      placeholder="Methodology name..."
+                      value={newMethodologyName}
+                      onChange={(e) => setNewMethodologyName(e.target.value)}
+                      className="text-sm bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                    />
+                    <Textarea
+                      placeholder="Description..."
+                      value={newMethodologyDescription}
+                      onChange={(e) => setNewMethodologyDescription(e.target.value)}
+                      className="text-sm min-h-[60px] resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                    />
+                    <Textarea
+                      placeholder="Commands (one per line)"
+                      value={newMethodologyCommands}
+                      onChange={(e) => setNewMethodologyCommands(e.target.value)}
+                      className="text-sm min-h-[80px] font-mono resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                    />
+                    <Button
+                      onClick={addMethodology}
+                      disabled={!newMethodologyName.trim()}
+                      size="sm"
+                      className="w-full bg-gray-600 hover:bg-gray-700 text-white"
+                    >
+                      <Plus className="h-3 w-3 mr-2" />
+                      Add Methodology
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Project Selector Modal */}
+      {showProjectSelector && (
+        <ProjectSelector
+          currentProject={currentProject}
+          onProjectSelect={handleProjectSelect}
+          onProjectCreate={handleProjectCreate}
+          onClose={() => setShowProjectSelector(false)}
+        />
+      )}
+
+      {/* Manual Step Modal */}
+      <ManualStepModal
+        isOpen={manualStepModal.open}
+        onClose={() => setManualStepModal({ open: false, step: null })}
+        step={manualStepModal.step}
+        projectId={currentProject?.id}
+        methodologyId={selectedMethodology?.id}
+        onEvidenceUploaded={handleManualStepComplete}
+      />
     </div>
   )
 }
