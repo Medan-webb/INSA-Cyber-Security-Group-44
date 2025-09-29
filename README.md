@@ -121,3 +121,133 @@ While platforms like Dradis, Faraday, PlexTrac, and AttackForge offer elements o
 in a single, user-friendly platform.
 
 This positions the proposed solution as first-to-market in its category.
+
+
+
+
+# 🛠️ Installation
+1. Clone the Repository
+```bash
+git clone <repository-url>
+cd INSA-Cyber-Security-Group-44
+```
+
+
+2. Frontend Setup (Next.js)
+```bash
+## Install dependencies
+npm install
+```
+
+
+3. Backend Setup (FastAPI)
+
+```
+cd back-end
+
+```
+inside the back-end create a vertual enviroment 
+
+```
+python -m venv env
+
+```
+
+inside the enviroment install the back-end dependencies
+
+```
+#linux
+
+pip install -r requirments.txt
+#or
+
+pip install fastapi uvicorn python-multipart
+```
+
+```bash
+# Install Python dependencies
+pip install fastapi uvicorn python-multipart
+```
+
+🚦 Quick Start
+
+```
+# Run the backend server
+python backend.py
+```
+The backend API will be available at http://localhost:5000
+
+## Run the front-end development server
+```
+npm run dev
+
+```
+
+1. Create Your First Project
+
+Open http://localhost:3000 in your browser
+
+Click "Create New Project"
+
+Enter:
+
+Project Name: "Client Security Assessment"
+
+Target: "example.com"
+
+2. Create a Methodology
+From the dashboard, click "Add New Methodology"
+
+Enter methodology details:
+
+Name: "Web Application Reconnaissance"
+
+Description: "Initial reconnaissance for web applications"
+
+Commands (one per line):
+
+text
+nmap -sC -sV {{target}} -oN scans/nmap_initial.txt
+whois {{target}} > scans/whois_info.txt
+dig ANY {{target}} > scans/dig_info.txt
+3. Execute the Methodology
+Select your methodology from the sidebar
+
+Click "Run All Steps" to execute commands sequentially
+
+Monitor real-time output in the terminal
+
+For manual steps, upload evidence when prompted
+
+4. Review Results
+Navigate to the "Reports" page
+
+View all executed commands and their outputs
+
+Browse collected evidence files
+
+Export results as JSON for documentation
+
+# 🎯 Key Concepts
+## Projects
+Isolated workspaces for different clients/assessments
+
+Each project has its own directory structure
+
+Contains all scans, evidence, and reports
+
+## Methodologies
+Reusable testing workflows
+
+Mix of automated commands and manual steps
+
+Support for variable substitution
+
+## Variables
+Use these placeholders in your commands:
+
+{{target}} - Project target (e.g., example.com)
+
+{{targetIP}} - Resolved IP address of target
+
+
