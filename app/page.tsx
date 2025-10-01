@@ -12,6 +12,9 @@ import { ProjectSelector } from "./components/ProjectSelector"
 import Link from "next/link"
 import ReportsPage from "./reports/page"
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
 interface MethodologyStep {
   id: string
   type: "command" | "manual"
@@ -100,6 +103,8 @@ export default function PentestMethodologies() {
   const [newStepType, setNewStepType] = useState<"command" | "manual">("command")
   const [newStepContent, setNewStepContent] = useState("")
 
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
   useEffect(() => {
     loadMethodologies()
     loadProjects()
@@ -161,6 +166,10 @@ export default function PentestMethodologies() {
     } catch (e) {
       console.error("Add methodology failed", e)
     }
+    // Clear form fields
+    setNewMethodologyName("");
+    setNewMethodologyDescription("");
+    setNewMethodologyCommands("");
   }
 
   async function deleteMethodology(id: number) {
@@ -194,84 +203,84 @@ export default function PentestMethodologies() {
       .replace(/\{\{project\}\}/g, project.name);
   }
   // Run command with project context// Run command with project context
-async function runCommand(command: string) {
-  if (!command || !currentProject) {
-    alert("Please select a project first")
-    return
-  }
-  
-  // Substitute variables
-  const substitutedCommand = substituteVariables(command, currentProject);
-  setTerminalOutput((p) => [...p, { command: substitutedCommand, output: "Running...", status: "running" }])
+  async function runCommand(command: string) {
+    if (!command || !currentProject) {
+      alert("Please select a project first")
+      return
+    }
 
-  try {
-    const res = await fetchJSON(`${apiBase}/exec`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    // Substitute variables
+    const substitutedCommand = substituteVariables(command, currentProject);
+    setTerminalOutput((p) => [...p, { command: substitutedCommand, output: "Running...", status: "running" }])
+
+    try {
+      const res = await fetchJSON(`${apiBase}/exec`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          command: substitutedCommand,
+          timeout_sec: 120,
+          project_id: currentProject.id,
+          methodology_id: selectedMethodology?.id
+        }),
+      })
+
+      const stdout = res.stdout ?? ""
+      const rc = res.returncode ?? 0
+
+      setTerminalOutput((prev) => {
+        const newArr = [...prev]
+        const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
+        const outItem = { command, output: stdout || "[no output]", status: rc === 0 ? "success" : "failed" }
+        if (idx >= 0) newArr[idx] = outItem
+        else newArr.push(outItem)
+        return newArr
+      })
+
+      // Save successful execution to history
+      const executionRecord = {
         command: substitutedCommand,
-        timeout_sec: 120,
-        project_id: currentProject.id,
+        output: stdout || "[no output]",
+        status: rc === 0 ? "success" : "failed",
+        timestamp: new Date().toISOString(),
+        project_id: currentProject?.id,
         methodology_id: selectedMethodology?.id
-      }),
-    })
+      }
 
-    const stdout = res.stdout ?? ""
-    const rc = res.returncode ?? 0
+      const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
+      savedHistory.push(executionRecord)
+      localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
 
-    setTerminalOutput((prev) => {
-      const newArr = [...prev]
-      const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
-      const outItem = { command, output: stdout || "[no output]", status: rc === 0 ? "success" : "failed" }
-      if (idx >= 0) newArr[idx] = outItem
-      else newArr.push(outItem)
-      return newArr
-    })
+      return { returncode: rc, stdout }
+    } catch (e: any) {
+      const errorMessage = `[ERROR] ${e?.message || String(e)}`
 
-    // Save successful execution to history
-    const executionRecord = {
-      command: substitutedCommand,
-      output: stdout || "[no output]",
-      status: rc === 0 ? "success" : "failed",
-      timestamp: new Date().toISOString(),
-      project_id: currentProject?.id,
-      methodology_id: selectedMethodology?.id
+      setTerminalOutput((prev) => {
+        const newArr = [...prev]
+        const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
+        const outItem = { command, output: errorMessage, status: "failed" as const }
+        if (idx >= 0) newArr[idx] = outItem
+        else newArr.push(outItem)
+        return newArr
+      })
+
+      // Save failed execution to history
+      const executionRecord = {
+        command: substitutedCommand,
+        output: errorMessage,
+        status: "failed",
+        timestamp: new Date().toISOString(),
+        project_id: currentProject?.id,
+        methodology_id: selectedMethodology?.id
+      }
+
+      const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
+      savedHistory.push(executionRecord)
+      localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
+
+      return { returncode: -1, stdout: "" }
     }
-
-    const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
-    savedHistory.push(executionRecord)
-    localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
-
-    return { returncode: rc, stdout }
-  } catch (e: any) {
-    const errorMessage = `[ERROR] ${e?.message || String(e)}`
-    
-    setTerminalOutput((prev) => {
-      const newArr = [...prev]
-      const idx = newArr.findIndex((x) => x.command === command && x.status === "running")
-      const outItem = { command, output: errorMessage, status: "failed" as const }
-      if (idx >= 0) newArr[idx] = outItem
-      else newArr.push(outItem)
-      return newArr
-    })
-
-    // Save failed execution to history
-    const executionRecord = {
-      command: substitutedCommand,
-      output: errorMessage,
-      status: "failed",
-      timestamp: new Date().toISOString(),
-      project_id: currentProject?.id,
-      methodology_id: selectedMethodology?.id
-    }
-
-    const savedHistory = JSON.parse(localStorage.getItem('commandHistory') || '[]')
-    savedHistory.push(executionRecord)
-    localStorage.setItem('commandHistory', JSON.stringify(savedHistory))
-
-    return { returncode: -1, stdout: "" }
   }
-}
 
   // Edit step functionality
   function startEditStep(stepId: string, content: string) {
@@ -653,7 +662,16 @@ async function runCommand(command: string) {
           {/* Methodologies List */}
           <Card className="mx-4 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle>
+                <Button
+                  onClick={() => setIsAddDialogOpen(true)}
+                  size="sm"
+                  className="bg-gray-600 hover:bg-gray-700 text-white h-8 w-8 p-0"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {methodologies.length === 0 ? (
@@ -692,6 +710,78 @@ async function runCommand(command: string) {
               )}
             </CardContent>
           </Card>
+
+          {/* Add Methodology Dialog */}
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add New Methodology
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="methodology-name" className="text-sm font-medium">
+                    Methodology Name
+                  </Label>
+                  <Input
+                    id="methodology-name"
+                    placeholder="Enter methodology name..."
+                    value={newMethodologyName}
+                    onChange={(e) => setNewMethodologyName(e.target.value)}
+                    className="text-sm bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="methodology-description" className="text-sm font-medium">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="methodology-description"
+                    placeholder="Enter description..."
+                    value={newMethodologyDescription}
+                    onChange={(e) => setNewMethodologyDescription(e.target.value)}
+                    className="text-sm min-h-[60px] resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="methodology-commands" className="text-sm font-medium">
+                    Commands (one per line)
+                  </Label>
+                  <Textarea
+                    id="methodology-commands"
+                    placeholder="Enter commands, one per line..."
+                    value={newMethodologyCommands}
+                    onChange={(e) => setNewMethodologyCommands(e.target.value)}
+                    className="text-sm min-h-[80px] font-mono resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                  />
+                </div>
+              </div>
+              <DialogFooter className="flex gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    addMethodology();
+                    setIsAddDialogOpen(false);
+                  }}
+                  disabled={!newMethodologyName.trim()}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white"
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Add Methodology
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <div className="p-4 border-t border-gray-200">
             <div className="text-xs text-gray-500 text-center">Total: {methodologies.length} methodologies</div>
@@ -1041,7 +1131,7 @@ async function runCommand(command: string) {
                   Select a methodology from the sidebar to start your penetration testing workflow for project:
                   <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
                 </p>
-                <ReportsPage/>
+                <ReportsPage />
 
                 {/* Add New Methodology Card */}
                 <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
