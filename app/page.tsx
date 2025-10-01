@@ -849,9 +849,12 @@ export default function PentestMethodologies() {
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={exportToJSON} size="sm">
-                      <Download className="h-4 w-4" />Export JSON
+                      <Download className="h-4 w-4" />Export JSONs
                     </Button>
                   </div>
+                  <Link href="/share" className="text-gray-700 hover:text-blue-600">
+                    Community
+                  </Link>
 
                 </div>
 
@@ -1130,6 +1133,12 @@ export default function PentestMethodologies() {
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   Select a methodology from the sidebar to start your penetration testing workflow for project:
                   <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
+
+
+                  or find one in the 
+                  <Link href="/share" className="text-gray-700 hover:text-blue-600">
+                    Community
+                  </Link>
                 </p>
                 <ReportsPage />
 

@@ -1,297 +1,327 @@
-# Pentest Methodology Builder & Orchestration Platform(PentestFlow)
-installation guide https://github.com/Medan-webb/INSA-Cyber-Security-Group-44/tree/main?tab=readme-ov-file#%EF%B8%8F-installation
+# Pentest Methodology Builder & Orchestration Platform (PentestFlow)
+
+> **Hybrid pentest platform**: combine automated tooling and guided manual testing to plan, execute, and document penetration tests in a repeatable, auditable way.
+
+---
+
+## Table of Contents
+
+1. Executive Summary
+2. Objectives
+3. Platform Overview
+4. Core Features
+
+   4.1 Methodology Templates
+
+   4.2 Tool Integration
+   
+   4.3 Execution Control
+   4.4 Documentation & Evidence Management
+   4.5 Reporting
+   4.6 Extensibility
+5. Advantages Over Fully Automated Tools
+6. Technology Stack
+7. Example Workflow
+8. Future Expansion
+9. Competitive Landscape
+10. Installation
+    10.1 Prerequisites
+    10.2 Clone the repository
+    10.3 Frontend setup (Next.js)
+    10.4 Backend setup (FastAPI)
+    10.5 Docker tips
+    10.6 Running the platform (quick start)
+11. First Use: Create Project & Methodology
+    11.1 Create your first project
+    11.2 Create a methodology
+    11.3 Execute the methodology
+    11.4 Review results
+12. Key Concepts
+    12.1 Projects
+    12.2 Methodologies
+    12.3 Variables
+13. AI Integration (Ollama)
+    13.1 Install & run Ollama (Docker)
+    13.2 Validate AI setup
+14. Testing & Verification
+15. Example Commands & Playbook Snippets
+16. Maintenance, Backups & Security
+17. Contribution & Community
+18. License & Acknowledgements
+
+---
+
 ## 1. Executive Summary
 
-The Pentest Methodology Builder & Orchestration Platform is a hybrid (web and terminal-based) solution designed for penetration testers to plan, execute, and document security assessments in a structured and repeatable manner.
+The Pentest Methodology Builder & Orchestration Platform (PentestFlow) is a hybrid web + terminal solution for penetration testers. It provides a structured environment to combine automated scans with human-guided manual steps, preserving tester judgment while ensuring repeatability and high-quality reporting.
 
-It bridges the gap between full automation and manual testing, allowing testers to integrate their preferred tools, commands, and logic while maintaining flexibility for manual intervention.
+Key benefits:
 
-This hybrid approach:
-
-- Avoids over-reliance on automation.
-- Preserves the tester’s expertise and decision-making.
-- Ensures consistent reporting and documentation.
-- Encourages  sharing methodologies within the pentest community.
-
-
+* Prevents over-reliance on automation
+* Keeps manual decision points clear and auditable
+* Speeds reporting via auto-collected evidence
+* Encourages community sharing of methodologies
 
 ## 2. Objectives
 
-- Provide a customizable methodology builder for testers.
-- Orchestrate and execute both automated and manual testing steps.
-- Support integration of existing open-source and proprietary tools.
-- Maintain evidence logs for reporting and audit purposes.
-- Generate professional penetration testing reports.
-- Enable plugin-based extensibility for future tools and workflows.
-
+* Customizable methodology builder
+* Orchestrate both automated and manual steps
+* Integrate open-source and proprietary tools
+* Maintain evidence logs and generate professional reports
+* Plugin-based extensibility
 
 ## 3. Platform Overview
 
-The platform is an interactive pentest playbook where users can:
-
-- Create new projects and define scope.
-- Select or build a methodology (e.g., OWASP, PTES, bug bounty workflows).
-- Assign specific tools and commands to each step.
-- Run automated commands directly from the interface.
-- Receive instructions for manual steps and record results.
-- Compile all findings into a structured, exportable report.
+Users can create projects, define scope, select or create methodologies (OWASP, PTES, bug-bounty), assign tools/commands to steps, run automated commands from the UI, follow instructions for manual steps, and compile findings into exportable reports.
 
 ## 4. Core Features
 
 ### 4.1 Methodology Templates
-- Built-in frameworks: OWASP Web, PTES, Bug Bounty Workflow.
-- Ability to create, edit, and save custom templates.
-- Drag-and-drop interface for step organization.
+
+* Built-in frameworks: OWASP Web, PTES, Bug Bounty
+* Create, edit, save custom templates
+* Drag-and-drop step organization
 
 ### 4.2 Tool Integration
-- CLI-based tools (e.g., nmap, amass, sqlmap) executed in sandboxed environments.
-- API integrations (e.g., Shodan, Censys).
-- Output parsing and storage for reporting.
+
+* CLI tools run inside sandboxed containers (nmap, amass, sqlmap, gobuster)
+* API integrations for enrichment (Shodan, Censys)
+* Output parsing and storage for reporting
 
 ### 4.3 Execution Control
-- Automated execution for supported tools.
-- Manual mode for context-specific testing.
-- Step skipping, reordering, and modification during execution.
+
+* Automated execution for supported tools
+* Manual mode for human-guided checks
+* Runtime step skipping, reordering, and modification
 
 ### 4.4 Documentation & Evidence Management
-- Auto-log command outputs.
-- Upload screenshots, notes, and proof-of-concept files.
-- Severity tagging for findings.
+
+* Auto-log command outputs
+* Upload screenshots, PoC files, and notes
+* Severity tagging and metadata for findings
 
 ### 4.5 Reporting
-- Automatic generation of PDF/HTML reports containing:
-  - Scope and methodology.
-  - Findings with severity levels.
-  - Proof of Concept (PoC) evidence.
-  - Remediation recommendations.
+
+* Export PDF/HTML reports containing scope, methodology, findings, PoCs, and remediation guidance
 
 ### 4.6 Extensibility
-- Plugin-based system for adding new tools or methodologies.
-- API for integrating with external platforms (e.g., SIEM, ticketing systems).
 
+* Plugin system for adding tools or methodology components
+* API for CI/SIEM/ticketing integration
 
 ## 5. Advantages Over Fully Automated Tools
 
-- Human-centric: Maintains tester decision-making where automation fails.
-- Flexibility: Supports both automated scanning and guided manual testing.
-- Consistency: Ensures methodology-driven, repeatable assessments.
-- Documentation: Reduces report preparation time with auto-compiled results.
-
+* Human-centric decision points
+* Flexible mix of automated + manual steps
+* Repeatable methodology-driven assessments
+* Faster, consistent reporting
 
 ## 6. Technology Stack
 
-- Frontend: React.js tailwind css.
-- Backend: Python (FastAPI/Flask) for orchestration and API handling.
-- Execution Environment: Docker containers for running tools securely.
-- Database: PostgreSQL (methodologies, project data, findings).
-- Reporting Engine: ReportLab / Pandoc for PDF & HTML generation.
-- Storage: AWS S3 or local file storage for evidence files.
-
+* Frontend: React + Tailwind CSS
+* Backend: Python (FastAPI) or Flask
+* Execution: Docker containers for running tools securely
+* Database: PostgreSQL
+* Reporting: ReportLab / Pandoc
+* Storage: AWS S3 or local filesystem
 
 ## 7. Example Workflow
 
-Project: https://target.com
-| Step                  | Command                                          | Execution         |
-|-----------------------|-------------------------------------------------|-------------------|
-| Passive Recon         | amass enum -d target.com                       | Run automatically  |
-| Active Recon          | nmap -sV target.com                            | Run automatically  |
-| Directory Brute Force | gobuster dir -u https://target.com -w /wordlist.txt | Run automatically  |
-| Manual SQL Injection Test | Methodology notes displayed → Tester runs Burp Suite manually → Uploads PoC screenshot | Manual intervention |
+**Project:** `target.com`
 
-Reporting: System auto-compiles findings into a structured PDF.
+| Step                  | Command                                               | Execution |
+| --------------------- | ----------------------------------------------------- | --------- |
+| Passive Recon         | `amass enum -d {{target}}`                            | Automated |
+| Active Recon          | `nmap -sV {{target}}`                                 | Automated |
+| Directory Brute Force | `gobuster dir -u https://{{target}} -w /wordlist.txt` | Automated |
+| Manual SQL Injection  | Method notes → Tester runs Burp Suite → Upload PoC    | Manual    |
 
+The platform compiles results into a structured PDF report.
 
 ## 8. Future Expansion
 
-- Community Methodology Marketplace for sharing workflows.
-- AI-powered recommendations for next testing steps.
-- Integration with bug bounty platforms.
-- Cross-platform support for mobile and tablet usage.
-
+* Community Methodology Marketplace
+* AI-assisted next-step recommendations
+* Bug-bounty platform integration
+* Mobile/tablet support
 
 ## 9. Competitive Landscape
 
-While platforms like Dradis, Faraday, PlexTrac, and AttackForge offer elements of documentation, tool integration, or project tracking, none combine:
+Compared to Dradis, Faraday, PlexTrac, and AttackForge, PentestFlow uniquely blends custom methodology creation, direct tool execution, manual-guidance, and automatic evidence logging in a single platform.
 
-- Custom methodology creation
-- Direct tool execution
-- Manual testing guidance
-- Automatic evidence logging
+---
 
-in a single, user-friendly platform.
+# 10. Installation
 
-This positions the proposed solution as first-to-market in its category.
+> **Prerequisites**
+>
+> * Git
+> * Node.js (16+) / npm
+> * Python 3.10+
+> * Docker & Docker Compose (recommended)
+> * PostgreSQL (or Dockerized Postgres)
 
+### 10.2 Clone the repository
 
-
-
-# 🛠️ Installation
-1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/Medan-webb/INSA-Cyber-Security-Group-44.git
 cd INSA-Cyber-Security-Group-44
 ```
 
+### 10.3 Frontend setup (Next.js)
 
-2. Frontend Setup (Next.js)
 ```bash
-## Install dependencies
+cd front-end || cd web || # replace with actual frontend folder name
 npm install
+npm run dev
+# Frontend dev server: http://localhost:3000
 ```
 
-
-3. Backend Setup (FastAPI)
-
-```
-cd back-end
-
-```
-inside the back-end create a vertual enviroment 
-
-```
-python -m venv env
-
-```
-
-inside the enviroment install the back-end dependencies
-
-```
-#linux
-
-pip install -r requirments.txt
-#or
-
-pip install fastapi uvicorn python-multipart
-```
+### 10.4 Backend setup (FastAPI)
 
 ```bash
-# Install Python dependencies
+cd back-end || cd backend
+python -m venv .venv
+# Activate the venv
+# Linux/macOS:
+source .venv/bin/activate
+# Windows (PowerShell):
+# .\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+# or install minimal deps if requirements.txt is missing
 pip install fastapi uvicorn python-multipart
 ```
 
-🚦 Quick Start
+#### Run backend (development)
 
+```bash
+# Example - adapt to your entrypoint (main.py, app.py, backend.py)
+uvicorn backend:app --host 0.0.0.0 --port 5000 --reload
+# API: http://localhost:5000
 ```
-# Run the backend server
+
+### 10.5 Docker tips
+
+* Use Docker to isolate tool execution and avoid polluting host.
+* Example: build a Docker image that contains required CLI tools and mounts a workspace.
+
+### 10.6 Quick start (one-line)
+
+```bash
+# Start backend (if using provided script)
 python backend.py
-```
-The backend API will be available at http://localhost:5000
-
-## Run the front-end development server
-```
+# Start frontend
 npm run dev
-
 ```
 
-## 1. Create Your First Project
+---
 
-Open http://localhost:3000 in your browser
+## 11. First Use: Create Project & Methodology
 
-Click "Create New Project"
+### 11.1 Create your first project
 
-Enter:
+1. Open: `http://localhost:3000`
+2. Click **Create New Project**
+3. Enter project name (e.g., `Client Security Assessment`) and target (e.g., `example.com`)
 
-Project Name: "Client Security Assessment"
+### 11.2 Create a methodology
 
-Target: "example.com"
+1. Dashboard → **Add New Methodology**
+2. Fill details: name, description, and list commands (one per line). Example commands using variables:
 
-## 2. Create a Methodology
-From the dashboard, click "Add New Methodology"
-
-Enter methodology details:
-
-Name: "Web Application Reconnaissance"
-
-Description: "Initial reconnaissance for web applications"
-
-Commands (one per line):
-
-text
+```
 nmap -sC -sV {{target}} -oN scans/nmap_initial.txt
 whois {{target}} > scans/whois_info.txt
 dig ANY {{target}} > scans/dig_info.txt
-## 3. Execute the Methodology
-Select your methodology from the sidebar
-
-Click "Run All Steps" to execute commands sequentially
-
-Monitor real-time output in the terminal
-
-For manual steps, upload evidence when prompted
-
-## 4. Review Results
-Navigate to the "Reports" page
-
-View all executed commands and their outputs
-
-Browse collected evidence files
-
-Export results as JSON for documentation
-
-# 🎯 Key Concepts
-## Projects
-Isolated workspaces for different clients/assessments
-
-Each project has its own directory structure
-
-Contains all scans, evidence, and reports
-
-## Methodologies
-Reusable testing workflows
-
-Mix of automated commands and manual steps
-
-Support for variable substitution
-
-## Variables
-Use these placeholders in your commands:
-
-{{target}} - Project target (e.g., example.com)
-
-{{targetIP}} - Resolved IP address of target
-
-
-# AI setup 
-
-instal ollama
-
 ```
-# Run Ollama in Docker - no installation needed
-docker run -d --name ollama -p 11434:11434 -v ollama:/root/.ollama ollama/ollama
 
-# Pull a model
+### 11.3 Execute the methodology
+
+* Select methodology → **Run All Steps**
+* Automated steps run in sandbox; manual steps prompt the tester to perform actions and upload evidence.
+
+### 11.4 Review results
+
+* Reports page shows executed commands, outputs, and attachments
+* Export JSON or PDF
+
+---
+
+## 12. Key Concepts
+
+### 12.1 Projects
+
+Isolated workspaces containing scans, evidence, and reports for a single engagement.
+
+### 12.2 Methodologies
+
+Reusable workflows combining automated commands and manual steps.
+
+### 12.3 Variables
+
+* `{{target}}` — project host or domain
+* `{{targetIP}}` — resolved IP address
+
+---
+
+## 13. AI Integration (Ollama)
+
+> Ollama can be used locally via Docker to host models for on-prem AI assistance. Below are recommended steps.
+
+### 13.1 Run Ollama in Docker
+
+```bash
+docker run -d --name ollama -p 11434:11434 -v ollama-data:/root/.ollama --restart unless-stopped ollama/ollama
+# Pull a model (example):
 docker exec ollama ollama pull codellama:7b
+```
 
-# Test it
+### 13.2 Validate AI setup
+
+```bash
 curl http://localhost:11434/api/tags
-```
-
-
-```
-
-# 1. Make sure Docker is installed and running in WSL
-sudo service docker start
-docker --version
-
-# 2. Run Ollama in Docker
-docker run -d \
-  --name ollama \
-  -p 11434:11434 \
-  -v ollama-data:/root/.ollama \
-  --restart unless-stopped \
-  ollama/ollama
-
-# 3. Pull the model (takes a few minutes)
-docker exec ollama ollama pull codellama:7b
-
-# 4. Verify it's working
-curl http://localhost:11434/api/tags
-```
-
-
-# testing the AI's correctly configured or not 
-
+# Test your backend AI integration endpoint:
 http://localhost:5000/api/ai-status
+```
 
+---
 
-returns json file 
+## 14. Testing & Verification
+
+* Always reproduce scanner findings manually
+* Focus manual effort on authentication, authorization, business logic, file uploads, and APIs
+* Capture Burp logs, screenshots, and PoC scripts
+* Retest fixes by replaying the exact manual steps
+
+## 15. Example Commands & Playbook Snippets
+
+* `nmap -sS -sV -p- --min-rate=1000 --version-intensity 5 {{target}}`
+* `amass enum -d {{target}} -o scans/amass.txt`
+* `gobuster dir -u https://{{target}} -w /path/wordlists/common.txt -t 50 -x php,asp,html`
+* `curl -i -X POST 'https://api.{{target}}/v1/order' -H 'Authorization: Bearer <token>' -d '@payload.json'`
+* Simple race test (quick):
+
+```bash
+for i in {1..50}; do curl -s 'https://{{target}}/action' & done; wait
+```
+
+## 16. Maintenance, Backups & Security
+
+* Rotate API keys and service credentials
+* Backup PostgreSQL and evidence storage regularly
+* Run vulnerability scans against the platform itself
+* Use container isolation for tool execution
+
+## 17. Contribution & Community
+
+* Add methodology templates via pull requests
+* Share plugins in the community marketplace (future)
+
+## 18. License & Acknowledgements
+
+* Include the repository license and contributor acknowledgements.
+
+---
+
+*End of documentation.*
