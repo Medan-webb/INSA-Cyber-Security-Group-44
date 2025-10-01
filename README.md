@@ -1,4 +1,4 @@
-# Pentest Methodology Builder & Orchestration Platform
+# Pentest Methodology Builder & Orchestration Platform(PentestFlow)
 installation guide https://github.com/Medan-webb/INSA-Cyber-Security-Group-44/tree/main?tab=readme-ov-file#%EF%B8%8F-installation
 ## 1. Executive Summary
 
@@ -251,3 +251,47 @@ Use these placeholders in your commands:
 {{targetIP}} - Resolved IP address of target
 
 
+# AI setup 
+
+instal ollama
+
+```
+# Run Ollama in Docker - no installation needed
+docker run -d --name ollama -p 11434:11434 -v ollama:/root/.ollama ollama/ollama
+
+# Pull a model
+docker exec ollama ollama pull codellama:7b
+
+# Test it
+curl http://localhost:11434/api/tags
+```
+
+
+```
+
+# 1. Make sure Docker is installed and running in WSL
+sudo service docker start
+docker --version
+
+# 2. Run Ollama in Docker
+docker run -d \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama-data:/root/.ollama \
+  --restart unless-stopped \
+  ollama/ollama
+
+# 3. Pull the model (takes a few minutes)
+docker exec ollama ollama pull codellama:7b
+
+# 4. Verify it's working
+curl http://localhost:11434/api/tags
+```
+
+
+# testing the AI's correctly configured or not 
+
+http://localhost:5000/api/ai-status
+
+
+returns json file 

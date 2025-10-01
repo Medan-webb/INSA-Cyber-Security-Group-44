@@ -1,11 +1,38 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, Terminal, FileText, Download, Calendar, Search, Filter, FolderOpen } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Shield,
+  Terminal,
+  FileText,
+  Download,
+  Calendar,
+  Search,
+  Filter,
+  FolderOpen,
+  Brain,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  BarChart3,
+  Zap,
+  Users,
+  Target,
+  Sparkles,
+  ChevronDown,
+  MessageCircle
+} from "lucide-react"
 import Link from "next/link"
+import { generateAIAnalysis as generateAIAnalysisAPI } from '@/lib/ai-analysis';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 interface CommandExecution {
   command: string
@@ -44,6 +71,24 @@ interface Methodology {
   description?: string
 }
 
+interface AIAnalysis {
+  summary: string
+  findings: {
+    severity: "critical" | "high" | "medium" | "low" | "info"
+    title: string
+    description: string
+    evidence: string[]
+    recommendation: string
+  }[]
+  statistics: {
+    totalCommands: number
+    successfulCommands: number
+    failedCommands: number
+    evidenceCount: number
+    criticalFindings: number
+  }
+}
+
 const apiBase = "http://127.0.0.1:5000"
 
 async function fetchJSON(url: string, options?: RequestInit) {
@@ -60,6 +105,15 @@ async function fetchJSON(url: string, options?: RequestInit) {
   }
 }
 
+const exampleQuestions = [
+  "What are the most critical security findings?",
+  "Explain the network scan results in detail",
+  "What remediation steps should be prioritized?",
+  "Are there any exposed services that need immediate attention?",
+  "What additional testing would you recommend?",
+  "How secure is the current configuration based on the findings?"
+];
+
 export default function ReportsPage() {
   const [commandHistory, setCommandHistory] = useState<CommandExecution[]>([])
   const [manualEvidence, setManualEvidence] = useState<ManualEvidence[]>([])
@@ -68,6 +122,18 @@ export default function ReportsPage() {
   const [selectedProject, setSelectedProject] = useState<number | "all">("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [customPrompt, setCustomPrompt] = useState("")
+
+  const [aiProvider, setAiProvider] = useState<"local" | "online">("local");
+  const [onlineProvider, setOnlineProvider] = useState<"gemini" | "gpt">("gemini");
+
+  const [chatQuestion, setChatQuestion] = useState("");
+  const [chatAnswer, setChatAnswer] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<Array<{ question: string, answer: string }>>([]);
+
 
   useEffect(() => {
     loadReportsData()
@@ -76,8 +142,7 @@ export default function ReportsPage() {
   async function loadReportsData() {
     try {
       setLoading(true)
-      
-      // Load projects and methodologies for filtering
+
       const [projectsData, methodologiesData] = await Promise.all([
         fetchJSON(`${apiBase}/projects`),
         fetchJSON(`${apiBase}/methodologies`)
@@ -85,8 +150,6 @@ export default function ReportsPage() {
 
       setProjects(projectsData || [])
       setMethodologies(methodologiesData || [])
-
-      // Load evidence and command history
       await loadEvidenceAndCommands()
 
     } catch (error) {
@@ -98,17 +161,14 @@ export default function ReportsPage() {
 
   async function loadEvidenceAndCommands() {
     try {
-      // Try to load all evidence at once (if the endpoint exists)
       try {
         const evidenceData = await fetchJSON(`${apiBase}/evidence`);
         setManualEvidence(evidenceData || []);
       } catch (error) {
         console.log("Trying alternative evidence loading method...");
-        // If /evidence endpoint doesn't exist, load evidence per project
         await loadEvidencePerProject();
       }
 
-      // Load command history from localStorage
       const savedHistory = localStorage.getItem('commandHistory');
       if (savedHistory) {
         setCommandHistory(JSON.parse(savedHistory));
@@ -121,8 +181,6 @@ export default function ReportsPage() {
 
   async function loadEvidencePerProject() {
     let allEvidence: ManualEvidence[] = [];
-    
-    // Fetch evidence for each project individually
     for (const project of projects) {
       try {
         const evidenceData = await fetchJSON(`${apiBase}/evidence/${project.id}`);
@@ -131,25 +189,150 @@ export default function ReportsPage() {
         console.error(`Failed to load evidence for project ${project.id}`, error);
       }
     }
-    
     setManualEvidence(allEvidence);
   }
-
-  // Filter data based on selected project and search term
   const filteredCommands = commandHistory.filter(cmd => {
     const matchesProject = selectedProject === "all" || cmd.project_id === selectedProject
     const matchesSearch = cmd.command.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cmd.output.toLowerCase().includes(searchTerm.toLowerCase())
+      cmd.output.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesProject && matchesSearch
   })
 
   const filteredEvidence = manualEvidence.filter(evidence => {
     const matchesProject = selectedProject === "all" || evidence.project_id === selectedProject
     const matchesSearch = evidence.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         evidence.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         evidence.filename.toLowerCase().includes(searchTerm.toLowerCase())
+      evidence.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      evidence.filename.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesProject && matchesSearch
   })
+  // async function generateAIAnalysis() {
+  //   try {
+  //     setIsAnalyzing(true);
+
+  //     const analysisData = await generateAIAnalysisAPI({  // Use the renamed import
+  //       commands: filteredCommands,
+  //       evidence: filteredEvidence,
+  //       projects: projects,
+  //       methodologies: methodologies,
+  //       customPrompt: customPrompt
+  //     });
+
+  //     setAiAnalysis(analysisData);
+  //   } catch (error) {
+  //     console.error("AI analysis failed", error);
+  //     alert("AI analysis failed. Please check your AI service configuration.");
+  //   } finally {
+  //     setIsAnalyzing(false);
+  //   }
+  // }
+
+  async function handleGenerateAIAnalysis() {
+    try {
+      setIsAnalyzing(true);
+
+      // Prepare the request data with proper typing
+      const requestData = {
+        commands: filteredCommands.map(cmd => ({
+          command: cmd.command || "",
+          output: cmd.output || "",
+          status: cmd.status || "unknown",
+          timestamp: cmd.timestamp || new Date().toISOString(),
+          project_id: cmd.project_id || null,
+          methodology_id: cmd.methodology_id || null
+        })),
+        evidence: filteredEvidence.map(ev => ({
+          id: ev.id || 0,
+          project_id: ev.project_id || 0,
+          methodology_id: ev.methodology_id || null,
+          step_id: ev.step_id || "",
+          filename: ev.filename || "",
+          saved_path: ev.saved_path || "",
+          description: ev.description || "",
+          notes: ev.notes || "",
+          uploaded_at: ev.uploaded_at || Date.now(),
+          type: ev.type || "unknown"
+        })),
+        projects: projects.filter(p => selectedProject === "all" || p.id === selectedProject).map(p => ({
+          id: p.id,
+          name: p.name,
+          target: p.target,
+          targetIP: p.targetIP || "",
+          createdAt: p.createdAt,
+          status: p.status,
+          client: p.client || "",
+          scope: p.scope || ""
+        })),
+        methodologies: methodologies.map(m => ({
+          id: m.id,
+          name: m.name,
+          description: m.description || "",
+          commands: m.commands || [],
+          steps: m.steps || []
+        })),
+        customPrompt: customPrompt || "",
+        selectedProjectId: selectedProject === "all" ? null : selectedProject,
+        // Add online analysis parameters - these are the key fields
+        useOnline: aiProvider === "online",
+        onlineProvider: onlineProvider
+      };
+
+      console.log(`Sending ${aiProvider} AI analysis request using ${onlineProvider}:`, {
+        useOnline: requestData.useOnline,
+        onlineProvider: requestData.onlineProvider,
+        commandCount: requestData.commands.length,
+        evidenceCount: requestData.evidence.length
+      });
+
+      const response = await fetch(`${apiBase}/api/ai-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server response error:", errorText);
+        throw new Error(`Analysis failed: ${response.status} ${response.statusText}`);
+      }
+
+      const analysisData = await response.json();
+      console.log("AI Analysis response:", analysisData);
+
+      // Set the analysis data
+      setAiAnalysis(analysisData);
+
+    } catch (error) {
+      console.error("Analysis failed", error);
+
+      // Create a more informative fallback
+      const fallbackAnalysis = {
+        summary: `Analysis completed with ${aiProvider} AI. ${error.message}`,
+        findings: [
+          {
+            severity: "info" as const,
+            title: `${aiProvider === "online" ? "Online" : "Local"} AI Security Assessment`,
+            description: `Analyzed ${filteredCommands.length} commands and ${filteredEvidence.length} evidence files using ${aiProvider === "online" ? onlineProvider.toUpperCase() : "local Ollama"}.`,
+            evidence: [],
+            recommendation: "Review the collected data for security insights."
+          }
+        ],
+        statistics: {
+          totalCommands: filteredCommands.length,
+          successfulCommands: filteredCommands.filter(cmd => cmd.status === "success").length,
+          failedCommands: filteredCommands.filter(cmd => cmd.status === "failed").length,
+          evidenceCount: filteredEvidence.length,
+          criticalFindings: 0
+        }
+      };
+
+      setAiAnalysis(fallbackAnalysis);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
+
 
   function getProjectName(projectId: number) {
     const project = projects.find(p => p.id === projectId)
@@ -165,9 +348,25 @@ export default function ReportsPage() {
     return new Date(timestamp).toLocaleString()
   }
 
+  function getSeverityColor(severity: string) {
+    switch (severity) {
+      case "critical": return "bg-red-100 text-red-800 border-red-200"
+      case "high": return "bg-orange-100 text-orange-800 border-orange-200"
+      case "medium": return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "low": return "bg-blue-100 text-blue-800 border-blue-200"
+      default: return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  function exportToPDF() {
+    // Placeholder for PDF export functionality
+    alert("PDF export would be implemented here")
+  }
+
   function exportToJSON() {
     const reportData = {
       generatedAt: new Date().toISOString(),
+      aiAnalysis,
       commands: filteredCommands,
       evidence: filteredEvidence,
       projects: projects,
@@ -185,324 +384,946 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url)
   }
 
-  function clearAllData() {
-    if (confirm("Are you sure you want to clear all command history? This cannot be undone.")) {
-      setCommandHistory([])
-      localStorage.removeItem('commandHistory')
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading reports...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading security reports...</p>
         </div>
       </div>
     )
   }
+  // Helper functions for file handling
+  function isImageFile(filename: string): boolean {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    return imageExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+  }
 
+  function isTextFile(filename: string): boolean {
+    const textExtensions = ['.txt', '.log', '.md', '.json', '.xml', '.csv', '.conf', '.config'];
+    return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+  }
+
+  function getFileType(filename: string): string {
+    if (isImageFile(filename)) return 'image';
+    if (isTextFile(filename)) return 'text';
+    return 'file';
+  }
+
+  async function downloadEvidence(evidence: ManualEvidence) {
+    try {
+      const response = await fetch(`${apiBase}/api/evidence-file/${evidence.id}`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = evidence.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // Fallback to direct file path download
+        window.open(evidence.saved_path, '_blank');
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Final fallback
+      window.open(evidence.saved_path, '_blank');
+    }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      // You can add a toast notification here
+      alert('Path copied to clipboard!');
+    });
+  }
+
+  async function handleAIChat() {
+    if (!chatQuestion.trim()) return;
+
+    try {
+      setIsChatLoading(true);
+
+      // Prepare comprehensive context including AI analysis
+      const chatData = {
+        question: chatQuestion,
+        context: {
+          // Include the full AI analysis for background
+          ai_analysis: aiAnalysis,
+          // Include raw data for reference
+          commands: filteredCommands,
+          evidence: filteredEvidence,
+          projects: projects.filter(p => selectedProject === "all" || p.id === selectedProject),
+          methodologies: methodologies,
+          // Include filter context
+          current_filters: {
+            selectedProject: selectedProject,
+            searchTerm: searchTerm
+          }
+        },
+        // Include conversation history for continuity
+        conversation_history: conversationHistory,
+        // Provider settings
+        provider: onlineProvider,
+        use_online: aiProvider === "online"
+      };
+
+      console.log("💬 Sending chat question with full context:", {
+        question: chatQuestion,
+        hasAnalysis: !!aiAnalysis,
+        commandCount: filteredCommands.length,
+        evidenceCount: filteredEvidence.length,
+        conversationHistoryLength: conversationHistory.length
+      });
+
+      const response = await fetch(`${apiBase}/api/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chatData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Chat API error:", errorText);
+        throw new Error(`Chat failed: ${response.status}`);
+      }
+
+      const chatResponse = await response.json();
+
+      // Update chat answer
+      setChatAnswer(chatResponse.answer);
+
+      // Update conversation history with the new exchange
+      const newConversation = [
+        ...conversationHistory,
+        {
+          question: chatQuestion,
+          answer: chatResponse.answer,
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      setConversationHistory(newConversation);
+
+      // Clear the question input
+      setChatQuestion("");
+
+    } catch (error) {
+      console.error("AI Chat failed", error);
+
+      // Provide a helpful fallback response
+      const fallbackAnswer = `I encountered an error while processing your question. Please ensure:
+1. The AI analysis has been generated first
+2. Your backend service is running
+3. There is data to analyze
+
+Error: ${error.message}`;
+
+      setChatAnswer(fallbackAnswer);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-3">
             <Link href="/">
-            
-            <FileText className="h-8 w-8 text-primary" />
+              <div className="p-2 bg-white rounded-lg shadow-sm border">
+                <FileText className="h-6 w-6 text-blue-600" />
+              </div>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">Pentest Reports</h1>
-              <p className="text-muted-foreground">View command executions and collected evidence</p>
+              <h1 className="text-3xl font-bold text-gray-900">Security Assessment Reports</h1>
+              <p className="text-gray-600 mt-1">Comprehensive analysis of penetration testing activities and findings</p>
             </div>
           </div>
-          
-          <div className="flex gap-2">
-            <Button onClick={clearAllData} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
-              Clear History
-            </Button>
-            <Button onClick={exportToJSON}>
-              <Download className="h-4 w-4 mr-2" />
-              Export JSON
-            </Button>
+
+          <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
+              {/* AI Provider Selection */}
+              <div className="flex items-center gap-2 bg-white rounded-lg border p-2">
+                <label className="text-sm font-medium text-gray-700">AI Provider:</label>
+                <select
+                  value={aiProvider}
+                  onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
+                  className="text-sm border-none focus:ring-0"
+                >
+                  <option value="local">Local (Ollama)</option>
+                  <option value="online">Online (Gemini/GPT)</option>
+                </select>
+
+                {aiProvider === "online" && (
+                  <select
+                    value={onlineProvider}
+                    onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
+                    className="text-sm border-none focus:ring-0"
+                  >
+                    <option value="gemini">Google Gemini</option>
+                    <option value="gpt">OpenAI GPT</option>
+                  </select>
+                )}
+              </div>
+              <Button
+                onClick={handleGenerateAIAnalysis}  // Make sure it's this function
+                disabled={isAnalyzing}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {aiProvider === "local" ? "Local AI Analysis" : `Online AI Analysis (${onlineProvider.toUpperCase()})`}
+                  </>
+                )}
+              </Button>
+
+              <Button onClick={exportToPDF} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+              <Button onClick={exportToJSON} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export JSON
+              </Button>
+            </div>
           </div>
         </div>
+        {/* AI Analysis Customization */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <h4 className="font-semibold mb-3">AI Analysis Customization</h4>
+          <Textarea
+            placeholder="Add custom instructions for AI analysis (e.g., focus on specific vulnerabilities, compliance requirements, etc.)"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            className="mb-3 bg-white"
+            rows={3}
+          />
+          <Button
+            onClick={handleGenerateAIAnalysis}  // Make sure it's this function
+            disabled={isAnalyzing}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            {isAnalyzing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                {aiProvider === "local" ? "Local AI Analysis" : `Online AI Analysis (${onlineProvider.toUpperCase()})`}
+              </>
+            )}
+          </Button>
+        </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
+
+        {/* AI Analysis Section */}
+        {aiAnalysis && (
+          <Card className="mb-6 border-l-4 border-l-blue-500 shadow-lg">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Brain className="h-5 w-5 text-blue-600" />
+                  AI-Powered Security Analysis
+                </CardTitle>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  AI Generated
+                </Badge>
+              </div>
+              <CardDescription>
+                Automated analysis of security findings and recommendations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Summary */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Executive Summary</h4>
+                <p className="text-gray-700 bg-blue-50 rounded-lg p-4 border">
+                  {aiAnalysis.summary || "No summary available."}
+                </p>
+              </div>
+
+              {/* Statistics - With Safe Defaults */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {aiAnalysis.statistics?.totalCommands || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Total Commands</div>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="text-2xl font-bold text-green-600">
+                    {aiAnalysis.statistics?.successfulCommands || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Successful</div>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="text-2xl font-bold text-red-600">
+                    {aiAnalysis.statistics?.failedCommands || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Failed</div>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {aiAnalysis.statistics?.evidenceCount || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Evidence Files</div>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="text-2xl font-bold text-red-600">
+                    {aiAnalysis.statistics?.criticalFindings || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Critical Findings</div>
+                </div>
+              </div>
+
+              {/* Findings */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Security Findings ({aiAnalysis.findings?.length || 0})
+                </h4>
+                <div className="space-y-3">
+                  {aiAnalysis.findings && aiAnalysis.findings.length > 0 ? (
+                    aiAnalysis.findings.map((finding, index) => (
+                      <div key={index} className="border rounded-lg p-3 bg-white shadow-sm">
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-medium text-gray-900">
+                            {finding.title || "Untitled Finding"}
+                          </h5>
+                          <Badge className={getSeverityColor(finding.severity || "medium")}>
+                            {(finding.severity || "medium").toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-700 text-sm mb-3">
+                          {finding.description || "No description provided."}
+                        </p>
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-900">Recommendation:</span>
+                          <p className="text-gray-700 mt-1">
+                            {finding.recommendation || "No recommendation provided."}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No security findings to display.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filters and Search */}
+        <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col lg:flex-row gap-4 items-end">
+              <div className="flex-1 w-full">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Search Content</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search commands, outputs, or evidence..."
+                    placeholder="Search commands, outputs, evidence descriptions..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-white"
                   />
                 </div>
               </div>
-              
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value === "all" ? "all" : Number(e.target.value))}
-                className="border rounded-md px-3 py-2 text-sm"
+
+              <div className="w-full lg:w-64">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Project</label>
+                <select
+                  value={selectedProject}
+                  onChange={(e) => setSelectedProject(e.target.value === "all" ? "all" : Number(e.target.value))}
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Projects</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("")
+                  setSelectedProject("all")
+                }}
+                className="whitespace-nowrap"
               >
-                <option value="all">All Projects</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+                <Filter className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Terminal className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{filteredCommands.length}</p>
-                  <p className="text-sm text-muted-foreground">Commands Executed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{filteredEvidence.length}</p>
-                  <p className="text-sm text-muted-foreground">Evidence Files</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Shield className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{projects.length}</p>
-                  <p className="text-sm text-muted-foreground">Projects</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 lg:max-w-md">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="commands">Commands</TabsTrigger>
+            <TabsTrigger value="evidence">Evidence</TabsTrigger>
+            <TabsTrigger value="export">Export</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Command History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Terminal className="h-5 w-5" />
-                Command History ({filteredCommands.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {filteredCommands.length > 0 ? (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {filteredCommands.map((cmd, index) => (
-                    <div key={index} className="border rounded-lg p-3 bg-gray-50">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            cmd.status === "success" ? "bg-green-500" :
-                            cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"
-                          }`} />
-                          <code className="text-sm font-mono bg-black text-green-400 px-2 py-1 rounded">
-                            {cmd.command}
-                          </code>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          cmd.status === "success" ? "bg-green-100 text-green-800" :
-                          cmd.status === "failed" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                        }`}>
-                          {cmd.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {cmd.timestamp && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(cmd.timestamp).toLocaleString()}
-                          </span>
-                        )}
-                        {cmd.project_id && (
-                          <span className="flex items-center gap-1 mt-1">
-                            <FolderOpen className="h-3 w-3" />
-                            {getProjectName(cmd.project_id)}
-                          </span>
-                        )}
-                      </div>
+          <TabsContent value="overview" className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{filteredCommands.length}</p>
+                      <p className="text-sm text-gray-600">Commands Executed</p>
+                    </div>
+                    <Terminal className="h-8 w-8 text-blue-600" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                      <div className="bg-black text-green-400 p-2 rounded font-mono text-xs max-h-32 overflow-y-auto">
-                        <pre>{cmd.output}</pre>
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{filteredEvidence.length}</p>
+                      <p className="text-sm text-gray-600">Evidence Files</p>
+                    </div>
+                    <FileText className="h-8 w-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
+                      <p className="text-sm text-gray-600">Active Projects</p>
+                    </div>
+                    <Target className="h-8 w-8 text-purple-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{methodologies.length}</p>
+                      <p className="text-sm text-gray-600">Methodologies</p>
+                    </div>
+                    <Shield className="h-8 w-8 text-orange-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Zap className="h-5 w-5 text-orange-600" />
+                    Recent Commands
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {filteredCommands.slice(0, 5).map((cmd, index) => (
+                    <div key={index} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                      <div className={`w-2 h-2 rounded-full ${cmd.status === "success" ? "bg-green-500" :
+                        cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"
+                        }`} />
+                      <code className="text-xs font-mono flex-1 truncate">{cmd.command}</code>
+                      <Badge variant="outline" className="text-xs">
+                        {cmd.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Recent Evidence
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {filteredEvidence.slice(0, 5).map((evidence) => (
+                    <div key={evidence.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                      <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{evidence.filename}</p>
+                        <p className="text-xs text-gray-500 truncate">{evidence.description}</p>
                       </div>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Terminal className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No command history found</p>
-                  <p className="text-sm">Execute commands in the methodologies page to see them here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          <TabsContent value="commands">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Terminal className="h-5 w-5" />
+                  Command Execution History ({filteredCommands.length})
+                  <div className="flex gap-1 ml-auto">
+                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      {filteredCommands.filter(cmd => cmd.status === "success").length}
+                    </Badge>
+                    <Badge variant="outline" className="bg-red-50 text-red-700">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {filteredCommands.filter(cmd => cmd.status === "failed").length}
+                    </Badge>
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {filteredCommands.filter(cmd => cmd.status === "running").length}
+                    </Badge>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredCommands.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredCommands.map((cmd, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg bg-white hover:shadow-md transition-all duration-200 overflow-hidden"
+                      >
+                        {/* Command Header */}
+                        <div className={`
+                flex items-center justify-between p-3 border-b cursor-pointer
+                ${cmd.status === "success" ? "bg-green-50 border-green-200" :
+                            cmd.status === "failed" ? "bg-red-50 border-red-200" :
+                              "bg-yellow-50 border-yellow-200"}
+              `}
+                          onClick={() => {
+                            // Toggle output visibility
+                            const outputs = document.querySelectorAll('.command-output');
+                            const output = outputs[index] as HTMLElement;
+                            if (output) {
+                              output.style.display = output.style.display === 'none' ? 'block' : 'none';
+                            }
+                          }}>
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={`
+                    w-3 h-3 rounded-full flex-shrink-0
+                    ${cmd.status === "success" ? "bg-green-500" :
+                                cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"}
+                  `} />
 
-          {/* Manual Evidence */}
-          <Card>
+                            <div className="flex-1 min-w-0">
+                              <code className="text-sm font-mono text-gray-800 bg-white/80 px-2 py-1 rounded border truncate block">
+                                {cmd.command}
+                              </code>
+
+                              <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
+                                {cmd.timestamp && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(cmd.timestamp).toLocaleString()}
+                                  </span>
+                                )}
+                                {cmd.project_id && (
+                                  <span className="flex items-center gap-1">
+                                    <FolderOpen className="h-3 w-3" />
+                                    {getProjectName(cmd.project_id)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                            <Badge className={`
+                    ${cmd.status === "success" ? "bg-green-100 text-green-800 border-green-200" :
+                                cmd.status === "failed" ? "bg-red-100 text-red-800 border-red-200" :
+                                  "bg-yellow-100 text-yellow-800 border-yellow-200"}
+                  `}>
+                              {cmd.status}
+                            </Badge>
+                            <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
+                          </div>
+                        </div>
+
+                        {/* Command Output - Collapsible */}
+                        <div
+                          className="command-output p-4 bg-gray-900 text-green-400 font-mono text-sm"
+                          style={{ display: 'none' }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-gray-400 text-xs">Output:</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(cmd.output);
+                              }}
+                              className="h-6 text-xs text-gray-400 hover:text-white"
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                          <pre className="whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto">
+                            {cmd.output || <span className="text-gray-500">No output</span>}
+                          </pre>
+
+                          {/* Output Statistics */}
+                          {cmd.output && (
+                            <div className="mt-3 pt-2 border-t border-gray-700">
+                              <div className="flex gap-4 text-xs text-gray-400">
+                                <span>Lines: {cmd.output.split('\n').length}</span>
+                                <span>Chars: {cmd.output.length}</span>
+                                {cmd.output.length > 1000 && (
+                                  <span className="text-yellow-400">Large output</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <Terminal className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No command history found</p>
+                    <p className="text-sm">Execute commands in the methodologies page to see them here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="evidence">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Collected Evidence ({filteredEvidence.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredEvidence.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredEvidence.map((evidence) => (
+                      <Card key={evidence.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                        <CardContent className="p-0">
+                          {/* Evidence Preview Section */}
+                          <div className="border-b">
+                            {isImageFile(evidence.filename) ? (
+                              <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
+                                <img
+                                  src={`${apiBase}/api/evidence-file/${evidence.id}`}
+                                  alt={evidence.description}
+                                  className="w-full h-full object-contain max-h-64"
+                                  onError={(e) => {
+                                    // If image fails to load, show file icon
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                <div className="hidden absolute inset-0 flex-col items-center justify-center bg-gray-50 p-4">
+                                  <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                                  <span className="text-sm text-gray-500 text-center break-all">
+                                    {evidence.filename}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : isTextFile(evidence.filename) ? (
+                              <div className="bg-gray-900 text-green-400 p-4 max-h-48 overflow-y-auto">
+                                <TextFilePreview
+                                  filePath={evidence.saved_path}
+                                  filename={evidence.filename}
+                                  apiBase={apiBase}
+                                  evidenceId={evidence.id}
+                                />
+                              </div>
+                            ) : (
+                              <div className="aspect-video bg-gray-50 flex flex-col items-center justify-center p-4">
+                                <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                                <span className="text-sm text-gray-600 text-center break-all">
+                                  {evidence.filename}
+                                </span>
+                                <Badge variant="outline" className="mt-2 bg-gray-200">
+                                  {evidence.type || getFileType(evidence.filename)}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Evidence Details */}
+                          <div className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                <span className="font-medium text-sm truncate">{evidence.filename}</span>
+                              </div>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex-shrink-0">
+                                {evidence.type || getFileType(evidence.filename)}
+                              </Badge>
+                            </div>
+
+                            <div className="text-sm text-gray-600 mb-3 space-y-1">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatTimestamp(evidence.uploaded_at)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <FolderOpen className="h-3 w-3" />
+                                {getProjectName(evidence.project_id)}
+                              </div>
+                              {evidence.methodology_id && (
+                                <div className="flex items-center gap-1">
+                                  <Shield className="h-3 w-3" />
+                                  {getMethodologyName(evidence.methodology_id)}
+                                </div>
+                              )}
+                            </div>
+
+                            {evidence.description && (
+                              <p className="text-sm text-gray-700 mb-3 line-clamp-2">{evidence.description}</p>
+                            )}
+
+                            {evidence.notes && (
+                              <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+                                <p className="text-xs font-medium text-amber-800 mb-1">Investigator Notes:</p>
+                                <p className="text-xs text-amber-700 line-clamp-2">{evidence.notes}</p>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadEvidence(evidence)}
+                                className="flex-1"
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => copyToClipboard(evidence.saved_path)}
+                                className="flex-1"
+                              >
+                                Copy Path
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No evidence collected</p>
+                    <p className="text-sm">Upload evidence through manual steps to see them here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="export">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Export & Integration</CardTitle>
+                <CardDescription>
+                  Export your penetration testing data for reporting or further analysis
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button
+                    onClick={exportToJSON}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    variant="outline"
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span>Export Complete Report</span>
+                    <span className="text-xs text-gray-500">JSON Format</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const data = JSON.stringify(commandHistory, null, 2)
+                      const blob = new Blob([data], { type: 'application/json' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `command-history-${Date.now()}.json`
+                      a.click()
+                    }}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    variant="outline"
+                  >
+                    <Terminal className="h-6 w-6" />
+                    <span>Export Commands Only</span>
+                    <span className="text-xs text-gray-500">JSON Format</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const data = JSON.stringify(manualEvidence, null, 2)
+                      const blob = new Blob([data], { type: 'application/json' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `evidence-${Date.now()}.json`
+                      a.click()
+                    }}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    variant="outline"
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span>Export Evidence Only</span>
+                    <span className="text-xs text-gray-500">JSON Format</span>
+                  </Button>
+                </div>
+
+
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        {aiAnalysis && (
+          <Card className="mb-6 border-l-4 border-l-green-500 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Manual Evidence ({filteredEvidence.length})
+                <MessageCircle className="h-5 w-5 text-green-600" />
+                Ask AI Follow-up Questions
               </CardTitle>
+              <CardDescription>
+                Get more insights about the security assessment. Ask about specific findings, recommendations, or details.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              {filteredEvidence.length > 0 ? (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {filteredEvidence.map((evidence) => (
-                    <div key={evidence.id} className="border rounded-lg p-3 bg-gray-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-sm">{evidence.filename}</span>
+            <CardContent className="space-y-4">
+              {/* Example questions */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Example questions you can ask:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {exampleQuestions.map((question, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setChatQuestion(question)}
+                      className="text-xs h-auto py-2 px-3 text-left"
+                    >
+                      {question}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chat input */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ask about specific vulnerabilities, recommendations, or details..."
+                  value={chatQuestion}
+                  onChange={(e) => setChatQuestion(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAIChat()}
+                  disabled={isChatLoading}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAIChat}
+                  disabled={isChatLoading || !chatQuestion.trim()}
+                  className="whitespace-nowrap"
+                >
+                  {isChatLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                      Asking...
+                    </>
+                  ) : (
+                    "Ask AI"
+                  )}
+                </Button>
+              </div>
+
+              {/* Chat answer */}
+              {chatAnswer && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="h-4 w-4 text-green-600" />
+                    <h4 className="font-semibold text-green-800">AI Response:</h4>
+                  </div>
+                  <div className="prose prose-green max-w-none text-green-700">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {chatAnswer}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {conversationHistory.length > 0 && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-700">Conversation History:</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConversationHistory([])}
+                      className="text-xs"
+                    >
+                      Clear History
+                    </Button>
+                  </div>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {conversationHistory.map((conv, index) => (
+                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="flex items-start gap-2 mb-2">
+                          <span className="font-medium text-blue-600 text-sm">Q:</span>
+                          <p className="text-sm flex-1">{conv.question}</p>
                         </div>
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                          {evidence.type}
-                        </span>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground mb-2 space-y-1">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatTimestamp(evidence.uploaded_at)}
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-green-600 text-sm">A:</span>
+                          <p className="text-sm flex-1">{conv.answer}</p>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <FolderOpen className="h-3 w-3" />
-                          {getProjectName(evidence.project_id)}
-                          {evidence.methodology_id && ` • ${getMethodologyName(evidence.methodology_id)}`}
-                        </div>
-                        {evidence.step_id && (
-                          <div className="text-xs">
-                            Step ID: <code className="bg-gray-200 px-1 rounded">{evidence.step_id}</code>
+                        {conv.timestamp && (
+                          <div className="text-xs text-gray-500 mt-2 text-right">
+                            {new Date(conv.timestamp).toLocaleTimeString()}
                           </div>
                         )}
                       </div>
-
-                      {evidence.description && (
-                        <p className="text-sm mb-2">{evidence.description}</p>
-                      )}
-                      
-                      {evidence.notes && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
-                          <p className="text-xs font-medium text-yellow-800 mb-1">Notes:</p>
-                          <p className="text-xs text-yellow-700">{evidence.notes}</p>
-                        </div>
-                      )}
-                      
-                      <div className="mt-2 text-xs">
-                        <span className="text-muted-foreground">Path: </span>
-                        <code className="bg-gray-200 px-1 rounded break-all">{evidence.saved_path}</code>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No manual evidence found</p>
-                  <p className="text-sm">Upload evidence in manual steps to see them here</p>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Raw Data Export */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Raw Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => {
-                    const data = JSON.stringify(commandHistory, null, 2)
-                    const blob = new Blob([data], { type: 'application/json' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = `command-history-${Date.now()}.json`
-                    a.click()
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  Export Commands JSON
-                </Button>
-                <Button 
-                  onClick={() => {
-                    const data = JSON.stringify(manualEvidence, null, 2)
-                    const blob = new Blob([data], { type: 'application/json' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = `evidence-${Date.now()}.json`
-                    a.click()
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  Export Evidence JSON
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <h4 className="font-semibold mb-2">Commands Data Structure:</h4>
-                  <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
-                    {JSON.stringify({
-                      command: "string",
-                      output: "string", 
-                      status: "success|failed|running",
-                      timestamp: "string",
-                      project_id: "number"
-                    }, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Evidence Data Structure:</h4>
-                  <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
-                    {JSON.stringify({
-                      id: "number",
-                      project_id: "number",
-                      filename: "string",
-                      description: "string",
-                      saved_path: "string",
-                      uploaded_at: "number"
-                    }, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        )}
       </div>
     </div>
   )
