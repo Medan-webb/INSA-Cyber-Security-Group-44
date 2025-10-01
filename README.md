@@ -1,5 +1,5 @@
 # Pentest Methodology Builder & Orchestration Platform
-
+installation guide https://github.com/Medan-webb/INSA-Cyber-Security-Group-44/tree/main?tab=readme-ov-file#%EF%B8%8F-installation
 ## 1. Executive Summary
 
 The Pentest Methodology Builder & Orchestration Platform is a hybrid (web and terminal-based) solution designed for penetration testers to plan, execute, and document security assessments in a structured and repeatable manner.
@@ -183,7 +183,7 @@ npm run dev
 
 ```
 
-1. Create Your First Project
+## 1. Create Your First Project
 
 Open http://localhost:3000 in your browser
 
@@ -195,7 +195,7 @@ Project Name: "Client Security Assessment"
 
 Target: "example.com"
 
-2. Create a Methodology
+## 2. Create a Methodology
 From the dashboard, click "Add New Methodology"
 
 Enter methodology details:
@@ -210,7 +210,7 @@ text
 nmap -sC -sV {{target}} -oN scans/nmap_initial.txt
 whois {{target}} > scans/whois_info.txt
 dig ANY {{target}} > scans/dig_info.txt
-3. Execute the Methodology
+## 3. Execute the Methodology
 Select your methodology from the sidebar
 
 Click "Run All Steps" to execute commands sequentially
@@ -219,7 +219,7 @@ Monitor real-time output in the terminal
 
 For manual steps, upload evidence when prompted
 
-4. Review Results
+## 4. Review Results
 Navigate to the "Reports" page
 
 View all executed commands and their outputs
