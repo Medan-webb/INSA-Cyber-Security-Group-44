@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield } from 'lucide-react';
+import { ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -356,12 +356,13 @@ export default function SharePage() {
           </p>
         </div>
         <div className="flex items-center justify-between mb-6">
-          <link href="/">
-            <Shield className="h-4 w-4" />Back to Dashboard
-          </link>
+          <Link href="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
         </div>
 
-       
+
 
         {/* Browse Shared Methodologies */}
         <div>
@@ -685,7 +686,7 @@ export default function SharePage() {
             </div>
           )}
         </div>
-         {/* Share Methodology Section */}
+        {/* Share Methodology Section */}
         <div className="bg-white rounded-lg shadow-md mb-12">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-2xl font-semibold text-gray-800">Share Your Methodology</h2>

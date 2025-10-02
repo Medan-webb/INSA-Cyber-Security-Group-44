@@ -4,8 +4,8 @@ import React, { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown, Brain } from "lucide-react"
 
 import { ManualStepModal } from "./components/ManualStepModal"
 import { ProjectSelector } from "./components/ProjectSelector"
@@ -15,6 +15,20 @@ import ReportsPage from "./reports/page"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+
+import { scanTargetWithExternalServices, ExternalScanResult } from "@/lib/external-apis"
+import { Search, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
+
+
+import {
+  getCommandSuggestions,
+  explainCommand,
+  type CommandSuggestion,
+  type CommandExplanation,
+  type AISuggestionsRequest
+} from "@/lib/ai-command-suggestions"
+import { Lightbulb, HelpCircle, Sparkles, Bot, Zap } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 interface MethodologyStep {
   id: string
   type: "command" | "manual"
@@ -104,6 +118,19 @@ export default function PentestMethodologies() {
   const [newStepContent, setNewStepContent] = useState("")
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const [externalScanResults, setExternalScanResults] = useState<ExternalScanResult | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [showScanResults, setShowScanResults] = useState(false)
+
+
+  const [aiSuggestions, setAiSuggestions] = useState<CommandSuggestion[]>([])
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [commandExplanation, setCommandExplanation] = useState<CommandExplanation | null>(null)
+  const [explainingCommand, setExplainingCommand] = useState<string | null>(null)
+  const [aiProvider, setAiProvider] = useState<"local" | "online">("online")
+  const [onlineProvider, setOnlineProvider] = useState<"gemini" | "gpt">("gemini")
 
   useEffect(() => {
     loadMethodologies()
@@ -619,6 +646,98 @@ export default function PentestMethodologies() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
+  // Add this function to your component
+  async function runExternalScan() {
+    if (!currentProject?.target) {
+      alert("Please set a project target first")
+      return
+    }
+
+    setIsScanning(true)
+    setExternalScanResults(null)
+    setShowScanResults(true)
+
+    try {
+      const results = await scanTargetWithExternalServices(currentProject.target)
+      setExternalScanResults(results)
+    } catch (error) {
+      console.error("External scan failed:", error)
+      setExternalScanResults({ error: "Scan failed" })
+    } finally {
+      setIsScanning(false)
+    }
+  }
+
+  // AI Suggestion Function
+  async function fetchAISuggestions() {
+    if (!selectedMethodology || !currentProject) {
+      alert("Please select a methodology and project first");
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+    setShowSuggestions(true);
+
+    try {
+      const request: AISuggestionsRequest = {
+        current_methodology: {
+          name: selectedMethodology.name,
+          description: selectedMethodology.description,
+          steps: selectedMethodology.steps || []
+        },
+        project_target: currentProject.target,
+        completed_steps: selectedMethodology.steps
+          ?.filter(step => step.completed)
+          .map(step => step.content) || [],
+        use_online: aiProvider === "online",
+        provider: onlineProvider
+      };
+
+      const suggestions = await getCommandSuggestions(request);
+      setAiSuggestions(suggestions);
+    } catch (error) {
+      console.error("Failed to get AI suggestions:", error);
+      alert("Failed to get AI suggestions. Using fallback suggestions.");
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }
+
+  // Command Explanation Function
+  async function explainSelectedCommand(command: string) {
+    if (!currentProject || !selectedMethodology) return;
+
+    setExplainingCommand(command);
+    setCommandExplanation(null);
+
+    try {
+      const explanation = await explainCommand(command, {
+        target: currentProject.target,
+        methodology: selectedMethodology.name,
+        use_online: aiProvider === "online",
+        provider: onlineProvider
+      });
+      setCommandExplanation(explanation);
+    } catch (error) {
+      console.error("Failed to explain command:", error);
+      alert("Failed to get command explanation.");
+    } finally {
+      setExplainingCommand(null);
+    }
+  }
+
+  // Quick action to add suggested command
+  function addSuggestedCommand(command: string) {
+    if (!selectedMethodology) return;
+
+    setNewStepType("command");
+    setNewStepContent(command);
+    // Optionally auto-focus the input field
+    setTimeout(() => {
+      const input = document.querySelector('input[placeholder*="command"]') as HTMLInputElement;
+      if (input) input.focus();
+    }, 100);
+  }
 
   return (
 
@@ -890,7 +1009,179 @@ export default function PentestMethodologies() {
                     )}
                   </CardContent>
                 </Card>
+                {/* External Services Scan */}
+                <Card className="shadow-lg border-2 border-blue-200/80 backdrop-blur-sm bg-white/95">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Search className="h-5 w-5" />
+                      External Services Scan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={runExternalScan}
+                        disabled={isScanning || !currentProject?.target}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {isScanning ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Scanning...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4 mr-2" />
+                            Scan with Shodan & VirusTotal
+                          </>
+                        )}
+                      </Button>
 
+                      {externalScanResults && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowScanResults(!showScanResults)}
+                        >
+                          {showScanResults ? "Hide Results" : "Show Results"}
+                        </Button>
+                      )}
+                    </div>
+
+                    {showScanResults && externalScanResults && (
+                      <div className="space-y-4">
+                        {/* Shodan Results */}
+                        {externalScanResults.shodan && (
+                          <div className="border rounded-lg p-4 bg-blue-50">
+                            <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                              <Globe className="h-4 w-4" />
+                              Shodan Results
+                            </h3>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium">IP:</span> {externalScanResults.shodan.ip}
+                              </div>
+                              <div>
+                                <span className="font-medium">Organization:</span> {externalScanResults.shodan.org}
+                              </div>
+                              <div>
+                                <span className="font-medium">Open Ports:</span> {externalScanResults.shodan.ports?.join(", ") || "None"}
+                              </div>
+                              <div>
+                                <span className="font-medium">Hostnames:</span> {externalScanResults.shodan.hostnames?.join(", ") || "None"}
+                              </div>
+                            </div>
+
+                            {externalScanResults.shodan.data && externalScanResults.shodan.data.length > 0 && (
+                              <div className="mt-3">
+                                <h4 className="font-medium text-blue-700 mb-2">Service Details:</h4>
+                                <div className="space-y-2">
+                                  {externalScanResults.shodan.data.map((service, index) => (
+                                    <div key={index} className="bg-white p-2 rounded border text-xs">
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">Port {service.port}/{service.transport}</span>
+                                        {service.product && (
+                                          <span>{service.product} {service.version}</span>
+                                        )}
+                                      </div>
+                                      {service.banner && (
+                                        <div className="mt-1 font-mono text-gray-600 truncate">
+                                          {service.banner}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* VirusTotal Results */}
+                        {externalScanResults.virusTotal && (
+                          <div className="border rounded-lg p-4 bg-green-50">
+                            <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                              <Shield className="h-4 w-4" />
+                              VirusTotal Results
+                            </h3>
+
+
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1">
+                                  {maliciousCount > 0 ? (
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                  ) : suspiciousCount > 0 ? (
+                                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  )}
+                                  <span className="font-medium">
+                                    Security Status:{" "}
+                                    {maliciousCount > 0 ? "Malicious" :
+                                      suspiciousCount > 0 ? "Suspicious" : "Clean"}
+                                  </span>
+                                </div>
+
+                                <div className="text-sm text-gray-600">
+                                  {maliciousCount} malicious / {suspiciousCount} suspicious / {totalEngines} total engines
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium">Reputation:</span>{" "}
+                                  {externalScanResults.virusTotal.data.attributes.reputation || "N/A"}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Tags:</span>{" "}
+                                  {externalScanResults.virusTotal.data.attributes.tags?.join(", ") || "None"}
+                                </div>
+                              </div>
+
+                              {maliciousCount > 0 && (
+                                <div className="mt-2">
+                                  <h4 className="font-medium text-red-700 mb-2">Threat Detections:</h4>
+                                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    {Object.entries(externalScanResults.virusTotal.data.attributes.last_analysis_results)
+                                      .filter(([_, result]) => result.category === "malicious")
+                                      .map(([engine, result]) => (
+                                        <div key={engine} className="flex justify-between text-xs bg-red-100 p-1 rounded">
+                                          <span className="font-medium">{engine}</span>
+                                          <span className="text-red-700">{result.result}</span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Error State */}
+                        {externalScanResults.error && (
+                          <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                            <div className="flex items-center gap-2 text-red-800">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Scan failed: {externalScanResults.error}</span>
+                            </div>
+                            <p className="text-sm text-red-600 mt-1">
+                              Please check your API keys and target configuration.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* No Results */}
+                        {!externalScanResults.shodan && !externalScanResults.virusTotal && !externalScanResults.error && (
+                          <div className="text-center py-4 text-gray-500">
+                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No external scan data available for this target.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
                 {/* Steps Management */}
                 <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                   <CardHeader>
@@ -1048,7 +1339,7 @@ export default function PentestMethodologies() {
                               )}
 
                               {/* Run Button (for commands) */}
-                              {step.type === "command" && editingStepId !== step.id && (
+                              {/* {step.type === "command" && editingStepId !== step.id && (
                                 <Button
                                   size="sm"
                                   onClick={() => runCommand(step.content)}
@@ -1056,6 +1347,32 @@ export default function PentestMethodologies() {
                                 >
                                   Run
                                 </Button>
+                              )} */}
+
+                              {step.type === "command" && editingStepId !== step.id && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => runCommand(step.content)}
+                                    className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                  >
+                                    Run
+                                  </Button>
+                                  {/*  Explain button */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => explainSelectedCommand(step.content)}
+                                    disabled={explainingCommand === step.content}
+                                    className="flex-shrink-0 h-8"
+                                  >
+                                    {explainingCommand === step.content ? (
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
+                                    ) : (
+                                      <HelpCircle className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </>
                               )}
 
                               {/* Delete Button */}
@@ -1073,6 +1390,210 @@ export default function PentestMethodologies() {
                       </div>
                     ) : (
                       <p className="text-muted-foreground">No steps added yet.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+
+                {/* AI Command Suggestions */}
+                <Card className="shadow-lg border-2 border-purple-200/80 backdrop-blur-sm bg-white/95">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-purple-600" />
+                        AI Command Suggestions
+                      </div>
+
+                      {/* AI Provider Selection */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <select
+                          value={aiProvider}
+                          onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
+                          className="text-sm border rounded px-2 py-1"
+                        >
+                          <option value="local">Local AI</option>
+                          <option value="online">Online AI</option>
+                        </select>
+
+                        {aiProvider === "online" && (
+                          <select
+                            value={onlineProvider}
+                            onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
+                            className="text-sm border rounded px-2 py-1"
+                          >
+                            <option value="gemini">Gemini</option>
+                            <option value="gpt">GPT</option>
+                          </select>
+                        )}
+                      </div>
+                    </CardTitle>
+                    <CardDescription>
+                      Get AI-powered command suggestions based on your current methodology and target
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Suggestion Controls */}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={fetchAISuggestions}
+                        disabled={isLoadingSuggestions || !selectedMethodology || !currentProject}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        {isLoadingSuggestions ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Suggest Commands
+                          </>
+                        )}
+                      </Button>
+
+                      {showSuggestions && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowSuggestions(false)}
+                        >
+                          Hide Suggestions
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* AI Suggestions */}
+                    {showSuggestions && (
+                      <div className="space-y-3">
+                        {isLoadingSuggestions ? (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                            <p className="text-sm text-gray-600 mt-2">AI is analyzing your methodology...</p>
+                          </div>
+                        ) : aiSuggestions.length > 0 ? (
+                          aiSuggestions.map((suggestion, index) => (
+                            <div
+                              key={index}
+                              className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-md transition-all"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <code className="text-sm font-mono bg-black text-green-400 px-2 py-1 rounded flex-1">
+                                      {suggestion.command}
+                                    </code>
+                                    <Badge
+                                      className={`
+                        ${suggestion.risk_level === 'high' ? 'bg-red-100 text-red-800' :
+                                          suggestion.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-green-100 text-green-800'}
+                      `}
+                                    >
+                                      {suggestion.risk_level.toUpperCase()} RISK
+                                    </Badge>
+                                  </div>
+
+                                  <p className="text-sm text-gray-700 mb-2">{suggestion.description}</p>
+
+                                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      {suggestion.category}
+                                    </span>
+                                    {suggestion.prerequisites && suggestion.prerequisites.length > 0 && (
+                                      <span>Requires: {suggestion.prerequisites.join(', ')}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => addSuggestedCommand(suggestion.command)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add to Methodology
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => explainSelectedCommand(suggestion.command)}
+                                  disabled={explainingCommand === suggestion.command}
+                                >
+                                  {explainingCommand === suggestion.command ? (
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-1" />
+                                  ) : (
+                                    <HelpCircle className="h-3 w-3 mr-1" />
+                                  )}
+                                  Explain
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => runCommand(suggestion.command)}
+                                  className="ml-auto"
+                                >
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  Run Now
+                                </Button>
+                              </div>
+
+                              {/* Command Explanation */}
+                              {commandExplanation && explainingCommand === suggestion.command && (
+                                <div className="mt-3 p-3 bg-white border rounded-lg">
+                                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                    <Bot className="h-4 w-4 text-blue-600" />
+                                    AI Explanation
+                                  </h4>
+
+                                  <div className="space-y-2 text-sm">
+                                    <div>
+                                      <span className="font-medium">Purpose:</span>
+                                      <p className="text-gray-700">{commandExplanation.purpose}</p>
+                                    </div>
+
+                                    <div>
+                                      <span className="font-medium">Explanation:</span>
+                                      <p className="text-gray-700">{commandExplanation.explanation}</p>
+                                    </div>
+
+                                    {commandExplanation.risks.length > 0 && (
+                                      <div>
+                                        <span className="font-medium text-red-600">Risks:</span>
+                                        <ul className="list-disc list-inside text-gray-700">
+                                          {commandExplanation.risks.map((risk, i) => (
+                                            <li key={i}>{risk}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+
+                                    {commandExplanation.best_practices.length > 0 && (
+                                      <div>
+                                        <span className="font-medium text-green-600">Best Practices:</span>
+                                        <ul className="list-disc list-inside text-gray-700">
+                                          {commandExplanation.best_practices.map((practice, i) => (
+                                            <li key={i}>{practice}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4 text-gray-500">
+                            <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No suggestions available. Try generating suggestions with AI.</p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -1135,7 +1656,7 @@ export default function PentestMethodologies() {
                   <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
 
 
-                  or find one in the 
+                  or find one in the
                   <Link href="/share" className="text-gray-700 hover:text-blue-600">
                     Community
                   </Link>
