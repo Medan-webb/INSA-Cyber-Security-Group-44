@@ -2785,156 +2785,240 @@ def initialize_sample_shared_methodologies():
 async def startup_event():
     initialize_sample_shared_methodologies()
 
-@app.route('/api/ai-command-suggestions', methods=['POST'])
-def ai_command_suggestions():
-    """Get AI-powered command suggestions"""
+# Add to your existing models
+class CommandSuggestionRequest(BaseModel):
+    current_methodology: Dict[str, Any]
+    project_target: str
+    completed_steps: List[str] = []
+    custom_prompt: Optional[str] = None
+    use_online: bool = True
+    provider: str = "gemini"
+
+class CommandExplanationRequest(BaseModel):
+    command: str
+    context: Dict[str, Any]
+    use_online: bool = True
+    provider: str = "gemini"
+
+class CommandSuggestion(BaseModel):
+    command: str
+    description: str
+    category: str
+    risk_level: str
+    prerequisites: Optional[List[str]] = []
+    expected_output: Optional[str] = None
+
+class CommandExplanation(BaseModel):
+    command: str
+    explanation: str
+    purpose: str
+    risks: List[str]
+    alternatives: List[str]
+    best_practices: List[str]
+
+# Add these endpoints to your FastAPI app
+@app.post("/api/ai-command-suggestions", response_model=Dict[str, List[CommandSuggestion]])
+async def ai_command_suggestions(request: CommandSuggestionRequest):
+    """Get AI-powered command suggestions using Gemini"""
     try:
-        data = request.get_json()
-        
-        # Extract request data
-        methodology = data.get('current_methodology', {})
-        target = data.get('project_target', '')
-        completed_steps = data.get('completed_steps', [])
-        use_online = data.get('use_online', True)
-        provider = data.get('provider', 'gemini')
-        
-        # Prepare prompt for AI
+        print(f"🎯 AI Command Suggestions request received")
+        print(f"📊 Methodology: {request.current_methodology.get('name', 'Unknown')}")
+        print(f"🎯 Target: {request.project_target}")
+
+        # Prepare comprehensive prompt for AI
         prompt = f"""
-        As a cybersecurity expert, suggest penetration testing commands for the following context:
-        
-        Methodology: {methodology.get('name', 'Unknown')}
-        Description: {methodology.get('description', 'None')}
-        Target: {target}
-        Completed Steps: {completed_steps}
-        
-        Please suggest 3-5 relevant commands with:
-        - The exact command to run
-        - A brief description
-        - Category (Network Reconnaissance, Web Testing, Vulnerability Assessment, etc.)
-        - Risk level (low, medium, high)
-        - Any prerequisites
-        - Expected output
-        
-        Return as JSON array.
-        """
-        
-        if use_online:
-            # Use online AI (Gemini or GPT)
-            if provider == 'gemini':
-                suggestions = call_gemini_ai(prompt)
-            else:
-                suggestions = call_gpt_ai(prompt)
-        else:
-            # Use local Ollama
-            suggestions = call_ollama_ai(prompt)
-            
-        return jsonify({'suggestions': suggestions})
-        
-    except Exception as e:
-        print(f"AI suggestion error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+ACT AS: Senior Cybersecurity Penetration Tester
 
-@app.route('/api/ai-explain-command', methods=['POST'])
-def ai_explain_command():
-    """Get AI explanation for a specific command"""
+CONTEXT:
+- Current Methodology: {request.current_methodology.get('name', 'Unknown')} - {request.current_methodology.get('description', 'No description')}
+- Target: {request.project_target}
+- Completed Steps: {request.completed_steps if request.completed_steps else 'None'}
+- Custom Instructions: {request.custom_prompt or 'None'}
+
+TASK: Suggest 3-5 highly relevant penetration testing commands that would be appropriate for the current methodology phase.
+
+For each command, provide:
+1. The exact command string (use {{target}} for the target variable)
+2. Brief description of what it does
+3. Category (Network Reconnaissance, Web Testing, Vulnerability Assessment, Exploitation, Post-Exploitation)
+4. Risk level (low, medium, high) - consider detection risk and target impact
+5. Prerequisites (if any)
+6. Expected typical output
+
+IMPORTANT: Commands should be practical, commonly used in penetration testing, and appropriate for the methodology context.
+
+Return ONLY valid JSON array format, no other text:
+
+[
+  {{
+    "command": "nmap -sV -sC {{target}}",
+    "description": "Service version detection with script scanning",
+    "category": "Network Reconnaissance",
+    "risk_level": "low",
+    "prerequisites": ["Network access"],
+    "expected_output": "Open ports, service versions, script results"
+  }}
+]
+"""
+
+        print(f"📝 Prompt length: {len(prompt)} characters")
+
+        if request.use_online and request.provider == "gemini":
+            print("🚀 Using Gemini for command suggestions...")
+            ai_response = await analyze_with_gemini(prompt)
+            suggestions = parse_command_suggestions(ai_response)
+        else:
+            print("🔄 Using fallback suggestions")
+            suggestions = get_fallback_command_suggestions(request)
+
+        print(f"✅ Generated {len(suggestions)} command suggestions")
+        return {"suggestions": suggestions}
+
+    except Exception as e:
+        print(f"❌ AI command suggestion error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"suggestions": get_fallback_command_suggestions(request)}
+
+@app.post("/api/ai-explain-command", response_model=CommandExplanation)
+async def ai_explain_command(request: CommandExplanationRequest):
+    """Get AI explanation for a specific command using Gemini"""
     try:
-        data = request.get_json()
-        
-        command = data.get('command', '')
-        context = data.get('context', {})
-        use_online = data.get('use_online', True)
-        provider = data.get('provider', 'gemini')
-        
+        print(f"🔍 Command explanation request: {request.command[:100]}...")
+
         prompt = f"""
-        Explain this penetration testing command in detail:
-        
-        Command: {command}
-        Target: {context.get('target', 'Unknown')}
-        Methodology: {context.get('methodology', 'Unknown')}
-        
-        Provide a comprehensive explanation including:
-        1. What the command does
-        2. Its purpose in penetration testing
-        3. Potential risks and considerations
-        4. Alternative commands or approaches
-        5. Best practices when using this command
-        
-        Return as JSON with: explanation, purpose, risks[], alternatives[], best_practices[]
-        """
-        
-        if use_online:
-            if provider == 'gemini':
-                explanation = call_gemini_ai(prompt)
-            else:
-                explanation = call_gpt_ai(prompt)
+ACT AS: Senior Cybersecurity Instructor
+
+COMMAND TO EXPLAIN: {request.command}
+TARGET: {request.context.get('target', 'Unknown')}
+METHODOLOGY: {request.context.get('methodology', 'Unknown')}
+
+Provide a comprehensive explanation including:
+
+1. What the command does technically
+2. Its purpose in penetration testing context
+3. Potential risks and considerations
+4. Alternative commands or approaches
+5. Best practices when using this command
+
+Return ONLY valid JSON format:
+
+{{
+  "command": "{request.command}",
+  "explanation": "Detailed technical explanation...",
+  "purpose": "Primary use case in pentesting...",
+  "risks": ["Risk 1", "Risk 2"],
+  "alternatives": ["Alternative command 1", "Alternative command 2"],
+  "best_practices": ["Best practice 1", "Best practice 2"]
+}}
+"""
+
+        if request.use_online and request.provider == "gemini":
+            print("🚀 Using Gemini for command explanation...")
+            ai_response = await analyze_with_gemini(prompt)
+            explanation = parse_command_explanation(ai_response, request.command)
         else:
-            explanation = call_ollama_ai(prompt)
-            
-        return jsonify(explanation)
-        
-    except Exception as e:
-        print(f"Command explanation error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+            print("🔄 Using fallback explanation")
+            explanation = get_fallback_command_explanation(request.command, request.context)
 
-def call_gemini_ai(prompt: str):
-    """Call Google Gemini AI"""
-    try:
-        # You'll need to set up Gemini API
-        # This is a placeholder implementation
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            raise Exception("Gemini API key not configured")
-            
-        # Actual Gemini API implementation would go here
-        # For now, return mock data
-        return get_mock_suggestions()
-        
-    except Exception as e:
-        print(f"Gemini AI call failed: {str(e)}")
-        return get_mock_suggestions()
+        return explanation
 
-def call_gpt_ai(prompt: str):
-    """Call OpenAI GPT"""
-    try:
-        # OpenAI GPT implementation
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            raise Exception("OpenAI API key not configured")
-            
-        # Actual OpenAI API implementation
-        return get_mock_suggestions()
-        
     except Exception as e:
-        print(f"GPT AI call failed: {str(e)}")
-        return get_mock_suggestions()
+        print(f"❌ Command explanation error: {str(e)}")
+        return get_fallback_command_explanation(request.command, request.context)
 
-def call_ollama_ai(prompt: str):
-    """Call local Ollama"""
+# Helper functions
+def parse_command_suggestions(ai_response: str) -> List[CommandSuggestion]:
+    """Parse AI response for command suggestions"""
     try:
-        # Local Ollama implementation
-        response = requests.post('http://localhost:11434/api/generate', 
-                               json={'model': 'llama2', 'prompt': prompt})
-        if response.status_code == 200:
-            return parse_ollama_response(response.text)
+        import re
+        import json
+        
+        # Look for JSON pattern in the response
+        json_match = re.search(r'\[.*\]', ai_response, re.DOTALL)
+        if json_match:
+            suggestions_data = json.loads(json_match.group())
+            return [CommandSuggestion(**suggestion) for suggestion in suggestions_data]
         else:
-            raise Exception("Ollama not available")
+            print("❌ No JSON array found in AI response")
+            return get_fallback_suggestions_default()
     except Exception as e:
-        print(f"Ollama call failed: {str(e)}")
-        return get_mock_suggestions()
+        print(f"❌ Error parsing command suggestions: {e}")
+        return get_fallback_suggestions_default()
 
-def get_mock_suggestions():
-    """Fallback mock suggestions"""
+def parse_command_explanation(ai_response: str, original_command: str) -> CommandExplanation:
+    """Parse AI response for command explanation"""
+    try:
+        import re
+        import json
+        
+        # Look for JSON pattern in the response
+        json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
+        if json_match:
+            explanation_data = json.loads(json_match.group())
+            return CommandExplanation(**explanation_data)
+        else:
+            print("❌ No JSON object found in AI response")
+            return get_fallback_explanation_default(original_command)
+    except Exception as e:
+        print(f"❌ Error parsing command explanation: {e}")
+        return get_fallback_explanation_default(original_command)
+
+def get_fallback_command_suggestions(request: CommandSuggestionRequest) -> List[CommandSuggestion]:
+    """Fallback command suggestions"""
     return [
-        {
-            "command": "nmap -sV -sC -O {{target}}",
-            "description": "Comprehensive network scan with version detection and script scanning",
-            "category": "Network Reconnaissance", 
-            "risk_level": "low",
-            "prerequisites": ["Network access to target"],
-            "expected_output": "Open ports, service versions, OS detection"
-        }
+        CommandSuggestion(
+            command=f"nmap -sV -sC {request.project_target}",
+            description="Comprehensive network scan with version detection and script scanning",
+            category="Network Reconnaissance",
+            risk_level="low",
+            prerequisites=["Network access to target"],
+            expected_output="Open ports, service versions, OS detection"
+        ),
+        CommandSuggestion(
+            command=f"gobuster dir -u https://{request.project_target} -w /usr/share/wordlists/dirb/common.txt",
+            description="Directory and file brute force scanning",
+            category="Web Application Testing",
+            risk_level="medium",
+            prerequisites=["Web server accessible"],
+            expected_output="Discovered directories and files"
+        )
     ]
 
+def get_fallback_suggestions_default() -> List[CommandSuggestion]:
+    """Default fallback suggestions"""
+    return [
+        CommandSuggestion(
+            command="nmap -sV -sC {{target}}",
+            description="Service version detection with default scripts",
+            category="Network Reconnaissance",
+            risk_level="low",
+            prerequisites=["Network access"],
+            expected_output="Service versions and basic vulnerabilities"
+        )
+    ]
+
+def get_fallback_command_explanation(command: str, context: Dict[str, Any]) -> CommandExplanation:
+    """Fallback command explanation"""
+    return CommandExplanation(
+        command=command,
+        explanation=f"This is a security testing command targeting {context.get('target', 'the target')}.",
+        purpose="Security assessment and penetration testing",
+        risks=["May trigger security monitoring", "Could impact target system"],
+        alternatives=["Consider using less intrusive options first"],
+        best_practices=["Test in controlled environment", "Obtain proper authorization"]
+    )
+
+def get_fallback_explanation_default(command: str) -> CommandExplanation:
+    """Default fallback explanation"""
+    return CommandExplanation(
+        command=command,
+        explanation="This command is used in security testing for reconnaissance or vulnerability assessment.",
+        purpose="Security assessment",
+        risks=["Potential detection by security systems", "May cause service disruption"],
+        alternatives=[],
+        best_practices=["Use in authorized environments only", "Follow responsible disclosure practices"]
+    )
 # ============================
 # Health Check Endpoint
 # ============================

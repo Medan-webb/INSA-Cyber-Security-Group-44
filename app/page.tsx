@@ -667,7 +667,6 @@ export default function PentestMethodologies() {
       setIsScanning(false)
     }
   }
-
   // AI Suggestion Function
   async function fetchAISuggestions() {
     if (!selectedMethodology || !currentProject) {
@@ -693,6 +692,7 @@ export default function PentestMethodologies() {
         provider: onlineProvider
       };
 
+      console.log("🤖 Fetching AI command suggestions...", request);
       const suggestions = await getCommandSuggestions(request);
       setAiSuggestions(suggestions);
     } catch (error) {
@@ -711,6 +711,7 @@ export default function PentestMethodologies() {
     setCommandExplanation(null);
 
     try {
+      console.log("🤖 Explaining command:", command);
       const explanation = await explainCommand(command, {
         target: currentProject.target,
         methodology: selectedMethodology.name,
@@ -720,24 +721,24 @@ export default function PentestMethodologies() {
       setCommandExplanation(explanation);
     } catch (error) {
       console.error("Failed to explain command:", error);
-      alert("Failed to get command explanation.");
     } finally {
       setExplainingCommand(null);
     }
   }
-
   // Quick action to add suggested command
   function addSuggestedCommand(command: string) {
     if (!selectedMethodology) return;
 
     setNewStepType("command");
     setNewStepContent(command);
-    // Optionally auto-focus the input field
+    // Auto-focus the input field
     setTimeout(() => {
       const input = document.querySelector('input[placeholder*="command"]') as HTMLInputElement;
       if (input) input.focus();
     }, 100);
   }
+
+
 
   return (
 
@@ -1481,7 +1482,7 @@ export default function PentestMethodologies() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <code className="text-sm font-mono bg-black text-green-400 px-2 py-1 rounded flex-1">
-                                      {suggestion.command}
+                                      {suggestion.command.replace(/\{\{target\}\}/g, currentProject?.target || '{{target}}')}
                                     </code>
                                     <Badge
                                       className={`
