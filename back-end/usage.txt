@@ -1,23 +1,14 @@
-# create venv (optional but recommended)
+# create venv 
 python -m venv venv
 # linux / mac
 source venv/bin/activate
 # windows
 # .\venv\Scripts\activate
 
-pip install fastapi "uvicorn[standard]"
+pip install -r reqrequirements.txt
 
-# set secret (optional)
-export AGENT_SECRET=dev-secret            # mac / linux
-# or on Windows Powershell:
-# $env:AGENT_SECRET="dev-secret"
 
 # run via uvicorn (recommended)
-uvicorn agent:app --reload --host 127.0.0.1 --port 5000
-
-# or run python agent.py
-# python agent.py
+uvicorn backend:app --reload --host 127.0.0.1 --port 5000
 
 
-
-##### h
