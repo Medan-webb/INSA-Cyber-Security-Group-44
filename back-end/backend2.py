@@ -1,4 +1,3 @@
-# backend.py
 import os
 import json
 import uuid
@@ -33,7 +32,7 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-GEMINI_API_KEY = "AIzaSyCRwBoOyH94DLdpdlFDgKx6u_6T3GKBGnM"
+GEMINI_API_KEY = "your-gemin-api-key"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================
@@ -86,7 +85,7 @@ db = load_db()
 def initialize_default_methodologies():
     """Create default methodologies if they don't exist"""
     try:
-        
+
         default_methodologies = [
             {
                 "id": 1,
@@ -279,30 +278,30 @@ def initialize_default_methodologies():
                 ]
             }
         ]
-        
+
         # Check if methodologies exist in database
         existing_ids = [m['id'] for m in db_data.get('methodologies', [])]
         methodologies_added = 0
-        
+
         for methodology in default_methodologies:
             if methodology['id'] not in existing_ids:
                 db_data.setdefault('methodologies', []).append(methodology)
                 methodologies_added += 1
                 print(f"✅ Added default methodology: {methodology['name']}")
-        
+
         if methodologies_added > 0:
             save_db(db_data)
             print(f"🎯 Initialized {methodologies_added} default methodologies")
         else:
             print("📋 Default methodologies already exist")
-            
+
         return db_data['methodologies']
-        
+
     except Exception as e:
         print(f"❌ Error initializing default methodologies: {e}")
         return []
 
-initialize_default_methodologies()  
+initialize_default_methodologies()
 # ============================
 # Data Models
 # ============================
@@ -445,12 +444,12 @@ def update_project(project_id: int, p: Project):
 @app.get("/methodologies")
 def list_methodologies():
     """Return both default and user methodologies"""
-    default_methodologies = initialize_default_methodologies() 
+    default_methodologies = initialize_default_methodologies()
     user_methodologies = db.get("methodologies", [])
-    
+
     # Merge defaults and user methodologies
     all_methodologies = default_methodologies + user_methodologies
-    
+
     return all_methodologies
 @app.post("/methodologies")
 def add_methodology(m: MethodologyModel):
@@ -485,7 +484,7 @@ def delete_methodology(mid: int):
 def initialize_default_methodologies():
     """Create default methodologies if they don't exist"""
     db_data = load_db()
-    
+
     default_methodologies = [
         {
             "id": 1,
@@ -688,15 +687,15 @@ def initialize_default_methodologies():
             ]
         }
     ]
-    
+
     # Check if methodologies exist in database
     existing_ids = [m['id'] for m in db_data.get('methodologies', [])]
-    
+
     for methodology in default_methodologies:
         if methodology['id'] not in existing_ids:
             db_data.setdefault('methodologies', []).append(methodology)
             print(f"✅ Added default methodology: {methodology['name']}")
-    
+
     save_db(db_data)
     return db_data['methodologies']
 
@@ -830,7 +829,7 @@ async def get_evidence_file(evidence_id: int):
     """Serve evidence files with better error handling"""
     try:
         print(f"📁 Serving evidence file {evidence_id}")
-        
+
         # Find the evidence record
         evidence = next((e for e in db["evidence"] if e["id"] == evidence_id), None)
         if not evidence:
@@ -841,7 +840,7 @@ async def get_evidence_file(evidence_id: int):
         if not file_path:
             print(f"❌ No file path for evidence {evidence_id}")
             raise HTTPException(status_code=404, detail="File path not found")
-            
+
         if not os.path.exists(file_path):
             print(f"❌ File not found at path: {file_path}")
             # Try alternative locations
@@ -852,7 +851,7 @@ async def get_evidence_file(evidence_id: int):
                 raise HTTPException(status_code=404, detail="File not found on disk")
 
         filename = evidence.get("filename", "evidence")
-        
+
         # Determine content type
         if filename.lower().endswith(('.jpg', '.jpeg')):
             media_type = 'image/jpeg'
@@ -885,13 +884,13 @@ def exec_command(req: CommandRequest):
         project = None
         if hasattr(req, 'project_id') and req.project_id:
             project = next((p for p in db.get("projects", []) if int(p.get("id", 0)) == int(req.project_id)), None)
-        
+
         command = req.command
         if project:
             command = command.replace("{{target}}", project.get("target", ""))
             command = command.replace("{{targetIP}}", project.get("targetIP", project.get("target", "")))
             command = command.replace("{{project}}", project.get("name", ""))
-        
+
         print(f"Executing command: {command}")
         proc = subprocess.Popen(
             command,
@@ -1793,12 +1792,12 @@ async def ai_analysis(request: AIAnalysisRequest):
             )
             print(f"✅ Local analysis completed with {len(result.get('findings', []))} findings")
             return result
-            
+
     except Exception as e:
         print(f"❌ AI analysis failed: {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Fallback response
         return {
             "summary": f"Analysis completed with issues: {str(e)}",
@@ -1860,7 +1859,7 @@ async def online_ai_analysis(request: OnlineAIAnalysisRequest):
         print(f"❌ Online AI analysis error: {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Fallback to local analysis
         print("🔄 Falling back to local analysis...")
         return smart_detailed_analysis(
@@ -1872,7 +1871,7 @@ async def online_ai_analysis(request: OnlineAIAnalysisRequest):
 
 class TextFilePreview:
     """Helper for text file previews"""
-    
+
     @staticmethod
     async def get_preview(file_path: str, filename: str, api_base: str, evidence_id: int, max_lines: int = 20):
         try:
@@ -1888,7 +1887,7 @@ class TextFilePreview:
                     return preview
             except:
                 pass
-            
+
             # Fallback to direct file reading
             if os.path.exists(file_path):
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -1897,9 +1896,9 @@ class TextFilePreview:
                     if len(lines) > max_lines:
                         preview += f"\n\n... and {len(lines) - max_lines} more lines"
                     return preview
-                    
+
             return f"Unable to preview {filename}"
-            
+
         except Exception as e:
             return f"Preview error: {str(e)}"
 @app.post("/api/ai-chat")
@@ -1907,38 +1906,38 @@ async def ai_chat(request: AIChatRequest):
     """AI chat endpoint for follow-up questions"""
     try:
         print(f"💬 AI Chat request: {request.question[:100]}...")
-        
+
         # Build context from the analysis
         ai_analysis = request.context.get('previous_analysis')
         commands = request.context.get('commands', [])
         evidence = request.context.get('evidence', [])
-        
+
         # Create chat prompt
         chat_prompt = f"""
         SECURITY ASSESSMENT CHAT CONTEXT:
-        
+
         Previous Analysis Summary:
         {ai_analysis.get('summary', 'No previous analysis available') if ai_analysis else 'No analysis available'}
-        
+
         Key Findings: {len(ai_analysis.get('findings', [])) if ai_analysis else 0} security findings
         Commands Executed: {len(commands)}
         Evidence Collected: {len(evidence)}
-        
+
         Conversation History:
         {format_conversation_history(request.conversation_history)}
-        
+
         USER QUESTION: {request.question}
-        
+
         Please provide a helpful, specific response based on the security assessment context above.
         Focus on practical security insights and recommendations.
         """
-        
+
         # Use Gemini for chat (you can extend this for GPT later)
         if request.provider == "gemini" and GEMINI_AVAILABLE and GEMINI_API_KEY:
             try:
                 genai.configure(api_key=GEMINI_API_KEY)
                 model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
-                
+
                 response = model.generate_content(
                     chat_prompt,
                     generation_config={
@@ -1952,7 +1951,7 @@ async def ai_chat(request: AIChatRequest):
         else:
             # Fallback response
             answer = f"I received your question about the security assessment. Based on the analysis of {len(commands)} commands and {len(evidence)} evidence files, I'd be happy to help. However, the AI chat service is currently being configured. Please check the backend setup for complete functionality."
-        
+
         return {
             "answer": answer,
             "context_used": {
@@ -1962,7 +1961,7 @@ async def ai_chat(request: AIChatRequest):
                 "evidence_count": len(evidence)
             }
         }
-        
+
     except Exception as e:
         print(f"❌ AI Chat error: {e}")
         return {
@@ -1974,12 +1973,12 @@ def format_conversation_history(history):
     """Format conversation history for context"""
     if not history:
         return "No previous conversation"
-    
+
     formatted = []
     for i, exchange in enumerate(history[-3:], 1):  # Last 3 exchanges
         formatted.append(f"Q{i}: {exchange.get('question', '')}")
         formatted.append(f"A{i}: {exchange.get('answer', '')}")
-    
+
     return "\n".join(formatted)
 
 
@@ -1999,7 +1998,7 @@ def debug_print_prompt(prompt: str, request_data: OnlineAIAnalysisRequest):
     print("\n" + "🔍" * 40)
     print("🤖 AI PROMPT DEBUG INFORMATION")
     print("🔍" * 40)
-    
+
     print(f"\n📊 DATA PROVIDED TO AI:")
     print(f"   • Projects: {len(request_data.projects)}")
     print(f"   • Commands: {len(request_data.commands)}")
@@ -2007,19 +2006,19 @@ def debug_print_prompt(prompt: str, request_data: OnlineAIAnalysisRequest):
     print(f"   • Methodologies: {len(request_data.methodologies)}")
     print(f"   • Custom Prompt: '{request_data.customPrompt}'")
     print(f"   • Selected Project: {request_data.selectedProjectId}")
-    
+
     print(f"\n📝 SAMPLE COMMANDS ({min(5, len(request_data.commands))} of {len(request_data.commands)}):")
     for i, cmd in enumerate(request_data.commands[:5]):
         status_icon = "✅" if cmd.get('status') == 'success' else "❌"
         print(f"   {i+1}. {status_icon} {cmd.get('command', '')[:80]}...")
-    
+
     print(f"\n📁 SAMPLE EVIDENCE ({min(3, len(request_data.evidence))} of {len(request_data.evidence)}):")
     for i, ev in enumerate(request_data.evidence[:3]):
         print(f"   {i+1}. 📄 {ev.get('filename', 'Unknown')}: {ev.get('description', 'No description')}")
-    
+
     print(f"\n🎯 CUSTOM PROMPT:")
     print(f"   '{request_data.customPrompt or 'No custom prompt provided'}'")
-    
+
     print(f"\n📨 FULL PROMPT SENT TO AI:")
     print("─" * 80)
     print(prompt[:2000] + "..." if len(prompt) > 2000 else prompt)
@@ -2032,17 +2031,17 @@ def print_ai_analysis_to_terminal(analysis_data: dict, request_data: dict):
     print("\n" + "="*80)
     print("🛡️  AI SECURITY ASSESSMENT REPORT")
     print("="*80)
-    
+
     # Basic info
     print(f"📅 Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🔍 Project ID: {request_data.get('selectedProjectId', 'All Projects')}")
     print(f"📊 Commands analyzed: {analysis_data['statistics']['totalCommands']}")
     print(f"📁 Evidence files: {analysis_data['statistics']['evidenceCount']}")
-    
+
     # Summary
     print(f"\n📋 EXECUTIVE SUMMARY:")
     print(f"{analysis_data['summary']}")
-    
+
     # Findings
     print(f"\n🔍 SECURITY FINDINGS ({len(analysis_data['findings'])}):")
     for i, finding in enumerate(analysis_data['findings'], 1):
@@ -2051,7 +2050,7 @@ def print_ai_analysis_to_terminal(analysis_data: dict, request_data: dict):
         print(f"   Recommendation: {finding['recommendation']}")
         if finding['evidence']:
             print(f"   Evidence: {', '.join(finding['evidence'])}")
-    
+
     # Statistics
     print(f"\n📈 STATISTICS:")
     stats = analysis_data['statistics']
@@ -2060,7 +2059,7 @@ def print_ai_analysis_to_terminal(analysis_data: dict, request_data: dict):
     print(f"   • Failed: {stats['failedCommands']}")
     print(f"   • Evidence Files: {stats['evidenceCount']}")
     print(f"   • Critical Findings: {stats['criticalFindings']}")
-    
+
     print("="*80 + "\n")
 
 # Update the analyze_with_gemini function to use correct models
@@ -2071,7 +2070,7 @@ async def analyze_with_gemini(prompt: str):
             raise Exception("Gemini API key not configured")
 
         genai.configure(api_key=GEMINI_API_KEY)
-        
+
         # Use the exact model names from your available list
         model_names_to_try = [
             'models/gemini-2.0-flash',  # Fast and capable
@@ -2081,12 +2080,12 @@ async def analyze_with_gemini(prompt: str):
 
         model = None
         last_error = None
-        
+
         for model_name in model_names_to_try:
             try:
                 print(f"🔄 Trying model: {model_name}")
                 model = genai.GenerativeModel(model_name)
-                
+
                 # Test with a small prompt first
                 test_response = model.generate_content(
                     "Hello, please respond with 'OK' if you're working.",
@@ -2095,10 +2094,10 @@ async def analyze_with_gemini(prompt: str):
                         'max_output_tokens': 10,
                     }
                 )
-                
+
                 print(f"✅ Model {model_name} is working: {test_response.text}")
                 break
-                
+
             except Exception as e:
                 last_error = e
                 print(f"❌ Model {model_name} failed: {e}")
@@ -2108,7 +2107,7 @@ async def analyze_with_gemini(prompt: str):
             raise Exception(f"No working Gemini model found. Last error: {last_error}")
 
         print(f"🚀 Using model: {model_name} for analysis")
-        
+
         # Now generate the actual analysis
         response = model.generate_content(
             prompt,
@@ -2122,7 +2121,7 @@ async def analyze_with_gemini(prompt: str):
 
         print(f"📨 Gemini response received successfully")
         return response.text
-        
+
     except Exception as e:
         print(f"Gemini analysis error: {e}")
         raise Exception(f"Gemini analysis failed: {str(e)}")
@@ -2133,12 +2132,12 @@ async def ai_chat(request: AIChatRequest):
     """Chat with AI about the security assessment - User input only"""
     try:
         print(f"💬 AI Chat request: '{request.question}'")
-        
+
         # Prepare context for the chat
         commands = request.context.get('commands', [])
         evidence = request.context.get('evidence', [])
         previous_analysis = request.context.get('previous_analysis', {})
-        
+
         # Build focused chat prompt
         chat_prompt = f"""As a senior cybersecurity analyst, answer this specific question based on the penetration testing data:
 
@@ -2161,25 +2160,25 @@ Please provide:
 
 Answer format: Provide a clear, well-structured response without JSON formatting.
 """
-        
+
         # Print chat prompt for debugging
         print(f"💬 CHAT PROMPT SENT:")
         print("─" * 60)
         print(chat_prompt)
         print("─" * 60)
-        
+
         if request.provider == "gemini":
             answer = await analyze_with_gemini(chat_prompt)
         else:
             answer = await analyze_with_gpt(chat_prompt)
-        
+
         print(f"💬 CHAT RESPONSE: {answer[:200]}...")
-        
+
         # Return simple response
         return {
             "answer": answer
         }
-        
+
     except Exception as e:
         print(f"❌ AI Chat error: {e}")
         return {
@@ -2212,10 +2211,10 @@ async def ai_analysis(request: AIAnalysisRequest):
             request.customPrompt or "",
             request.selectedProjectId
         )
-    
+
     # Print to terminal
     print_ai_analysis_to_terminal(result, request.dict())
-    
+
     return result
 
 @app.get("/api/health")
@@ -2227,14 +2226,14 @@ async def health_check():
         "upload_dir": "healthy" if UPLOAD_DIR.exists() else "missing",
         "ai_services": {}
     }
-    
+
     # Check AI services
     try:
         ai_status = await get_ai_status()
         status["ai_services"] = ai_status
     except Exception as e:
         status["ai_services"] = {"error": str(e)}
-    
+
     return status
 @app.get("/api/ai-status")
 async def get_ai_status():
@@ -2291,767 +2290,13 @@ async def get_ai_status():
             status["online_gpt"]["status"] = f"Error: {str(e)}"
 
     return status
-# ============================
-# Methodology Sharing Models
-# ============================
-class SharedMethodology(BaseModel):
-    id: str
-    title: str
-    description: str
-    methodology_data: Dict[str, Any]
-    author: str = "Anonymous"
-    tags: List[str] = []
-    likes: int = 0
-    downloads: int = 0
-    comments: List[Dict[str, Any]] = []
-    created_at: float
-    updated_at: float
-    is_public: bool = True
-    views: int = 0  # Added for analytics
-
-class ShareMethodologyRequest(BaseModel):
-    methodologyId: str  # Changed to match frontend
-    title: str
-    description: str
-    author: str = "Anonymous"
-    tags: List[str] = []
-    is_public: bool = True
-
-class CommentRequest(BaseModel):
-    author: str = "Anonymous"
-    content: str
-    rating: Optional[int] = None
-
-class AdoptMethodologyRequest(BaseModel):
-    new_name: Optional[str] = None
-
-# ============================
-# Methodology Sharing Storage
-# ============================
-# In production, use a proper database
-shared_methodologies_db = {}
-popular_tags_cache = {}
-tags_cache_timestamp = 0
-
-def get_shared_methodologies_db():
-    """Get shared methodologies storage"""
-    global shared_methodologies_db
-    return shared_methodologies_db
-
-def update_popular_tags_cache():
-    """Update popular tags cache"""
-    global popular_tags_cache, tags_cache_timestamp
-    methodologies = list(get_shared_methodologies_db().values())
-    tag_counts = {}
-    
-    for methodology in methodologies:
-        for tag in methodology.get('tags', []):
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-    
-    popular_tags_cache = tag_counts
-    tags_cache_timestamp = time.time()
-
-# ============================
-# Methodology Sharing Endpoints
-# ============================
-
-@app.get("/api/shared-methodologies")
-def get_shared_methodologies(
-    search: Optional[str] = None,
-    tags: Optional[str] = None,
-    sort_by: str = "updated_at",
-    page: int = 1,
-    limit: int = 20
-):
-    """Get all shared methodologies with filtering and pagination"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        methodologies = list(methodologies_db.values())
-        
-        print(f"📊 Total methodologies in DB: {len(methodologies)}")
-
-        # Filter by search term
-        if search:
-            search_lower = search.lower()
-            methodologies = [
-                m for m in methodologies
-                if (search_lower in m.get('title', '').lower() or
-                    search_lower in m.get('description', '').lower() or
-                    search_lower in ' '.join(m.get('tags', [])).lower())
-            ]
-            print(f"🔍 After search filter: {len(methodologies)}")
-
-        # Filter by tags
-        if tags:
-            tag_list = [tag.strip().lower() for tag in tags.split(',')]
-            methodologies = [
-                m for m in methodologies
-                if any(tag in [t.lower() for t in m.get('tags', [])] for tag in tag_list)
-            ]
-            print(f"🏷️ After tag filter: {len(methodologies)}")
-
-        # Sort methodologies
-        if sort_by == "likes":
-            methodologies.sort(key=lambda x: x.get('likes', 0), reverse=True)
-        elif sort_by == "downloads":
-            methodologies.sort(key=lambda x: x.get('downloads', 0), reverse=True)
-        elif sort_by == "updated_at":
-            methodologies.sort(key=lambda x: x.get('updated_at', 0), reverse=True)
-        elif sort_by == "created_at":
-            methodologies.sort(key=lambda x: x.get('created_at', 0), reverse=True)
-
-        # Pagination
-        start_idx = (page - 1) * limit
-        end_idx = start_idx + limit
-        paginated_methodologies = methodologies[start_idx:end_idx]
-
-        print(f"📄 Pagination: page {page}, limit {limit}, showing {len(paginated_methodologies)}")
-
-        return {
-            "methodologies": paginated_methodologies,
-            "total": len(methodologies),
-            "page": page,
-            "limit": limit,
-            "total_pages": max(1, (len(methodologies) + limit - 1) // limit)
-        }
-
-    except Exception as e:
-        print(f"❌ Error in get_shared_methodologies: {e}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "methodologies": [],
-            "total": 0,
-            "page": page,
-            "limit": limit,
-            "total_pages": 0
-        }
-
-@app.post("/api/share-methodology")
-def share_methodology(request: ShareMethodologyRequest):
-    """Share a methodology to the community"""
-    try:
-        print(f"📤 Sharing methodology request: {request.dict()}")
-        
-        # Find the methodology to share
-        methodology = None
-        methodology_id = int(request.methodologyId)
-        
-        print(f"🔍 Looking for methodology ID: {methodology_id}")
-        print(f"📋 Available methodologies: {[m['id'] for m in db['methodologies']]}")
-        
-        for m in db["methodologies"]:
-            if int(m["id"]) == methodology_id:
-                methodology = m
-                break
-
-        if not methodology:
-            print(f"❌ Methodology {methodology_id} not found")
-            raise HTTPException(status_code=404, detail="Methodology not found")
-
-        print(f"✅ Found methodology: {methodology['name']}")
-
-        # Create shared methodology
-        shared_id = str(uuid.uuid4())
-        shared_methodology = SharedMethodology(
-            id=shared_id,
-            title=request.title,
-            description=request.description,
-            methodology_data=methodology,
-            author=request.author or "Anonymous",
-            tags=request.tags,
-            created_at=time.time(),
-            updated_at=time.time(),
-            is_public=request.is_public
-        )
-
-        # Save to storage
-        methodologies_db = get_shared_methodologies_db()
-        methodologies_db[shared_id] = shared_methodology.dict()
-        
-        # Update tags cache
-        update_popular_tags_cache()
-
-        print(f"✅ Methodology shared successfully with ID: {shared_id}")
-        
-        return {
-            "ok": True,
-            "shared_id": shared_id,
-            "message": "Methodology shared successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error sharing methodology: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to share methodology: {str(e)}")
-
-@app.get("/api/shared-methodologies/{shared_id}")
-def get_shared_methodology(shared_id: str):
-    """Get a specific shared methodology"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if shared_id not in methodologies_db:
-            print(f"❌ Shared methodology {shared_id} not found")
-            raise HTTPException(status_code=404, detail="Shared methodology not found")
-
-        methodology = methodologies_db[shared_id]
-
-        # Increment view count (for analytics)
-        methodology['views'] = methodology.get('views', 0) + 1
-        methodology['updated_at'] = time.time()
-
-        print(f"✅ Returning shared methodology: {methodology['title']}")
-        return methodology
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error getting shared methodology: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get shared methodology: {str(e)}")
-
-@app.post("/api/shared-methodologies/{shared_id}/like")
-def like_methodology(shared_id: str):
-    """Like a shared methodology"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if shared_id not in methodologies_db:
-            raise HTTPException(status_code=404, detail="Shared methodology not found")
-
-        methodology = methodologies_db[shared_id]
-        methodology['likes'] = methodology.get('likes', 0) + 1
-        methodology['updated_at'] = time.time()
-
-        print(f"✅ Liked methodology {shared_id}, total likes: {methodology['likes']}")
-        
-        return {"ok": True, "likes": methodology['likes']}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error liking methodology: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to like methodology: {str(e)}")
-
-@app.post("/api/shared-methodologies/{shared_id}/adopt")
-def adopt_methodology(shared_id: str, request: AdoptMethodologyRequest = None):
-    """Adopt a shared methodology into personal methodologies"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if shared_id not in methodologies_db:
-            raise HTTPException(status_code=404, detail="Shared methodology not found")
-
-        shared_methodology = methodologies_db[shared_id]
-        methodology_data = shared_methodology['methodology_data']
-
-        # Create a copy for the user
-        new_methodology = methodology_data.copy()
-        new_methodology['id'] = next_id(db["methodologies"])
-
-        if request and request.new_name:
-            new_methodology['name'] = request.new_name
-        else:
-            # Add " (Adopted)" suffix to distinguish
-            new_methodology['name'] = f"{new_methodology['name']} (Adopted)"
-
-        # Add to user's methodologies
-        db["methodologies"].append(new_methodology)
-        save_db(db)
-
-        # Increment download count
-        shared_methodology['downloads'] = shared_methodology.get('downloads', 0) + 1
-        shared_methodology['updated_at'] = time.time()
-
-        print(f"✅ Methodology adopted: {new_methodology['name']}")
-        
-        return {
-            "ok": True,
-            "methodology_id": new_methodology['id'],
-            "message": "Methodology adopted successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error adopting methodology: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to adopt methodology: {str(e)}")
-
-@app.post("/api/shared-methodologies/{shared_id}/comment")
-def add_comment(shared_id: str, request: CommentRequest):
-    """Add a comment to a shared methodology"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if shared_id not in methodologies_db:
-            raise HTTPException(status_code=404, detail="Shared methodology not found")
-
-        methodology = methodologies_db[shared_id]
-
-        comment = {
-            "id": str(uuid.uuid4()),
-            "author": request.author or "Anonymous",
-            "content": request.content,
-            "rating": request.rating,
-            "created_at": time.time()
-        }
-
-        if 'comments' not in methodology:
-            methodology['comments'] = []
-
-        methodology['comments'].append(comment)
-        methodology['updated_at'] = time.time()
-
-        print(f"✅ Comment added to methodology {shared_id}")
-        
-        return {"ok": True, "comment": comment}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error adding comment: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to add comment: {str(e)}")
-
-@app.get("/api/shared-methodologies/{shared_id}/comments")
-def get_comments(shared_id: str, page: int = 1, limit: int = 10):
-    """Get comments for a shared methodology"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if shared_id not in methodologies_db:
-            raise HTTPException(status_code=404, detail="Shared methodology not found")
-
-        methodology = methodologies_db[shared_id]
-        comments = methodology.get('comments', [])
-
-        # Sort by newest first
-        comments.sort(key=lambda x: x.get('created_at', 0), reverse=True)
-
-        # Pagination
-        start_idx = (page - 1) * limit
-        end_idx = start_idx + limit
-        paginated_comments = comments[start_idx:end_idx]
-
-        return {
-            "comments": paginated_comments,
-            "total": len(comments),
-            "page": page,
-            "limit": limit
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error getting comments: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get comments: {str(e)}")
-
-@app.get("/api/popular-tags")
-def get_popular_tags(limit: int = 15):
-    """Get most popular tags from shared methodologies"""
-    try:
-        global popular_tags_cache, tags_cache_timestamp
-        
-        # Refresh cache if it's old (older than 5 minutes)
-        if time.time() - tags_cache_timestamp > 300:
-            update_popular_tags_cache()
-
-        # Sort by count and get top tags
-        popular_tags = sorted(
-            popular_tags_cache.items(), 
-            key=lambda x: x[1], 
-            reverse=True
-        )[:limit]
-
-        print(f"✅ Returning {len(popular_tags)} popular tags")
-        
-        return [{"tag": tag, "count": count} for tag, count in popular_tags]
-
-    except Exception as e:
-        print(f"❌ Error getting popular tags: {e}")
-        return []
-
-# ============================
-# Initialize with Sample Data
-# ============================
-def initialize_sample_shared_methodologies():
-    """Initialize with some sample shared methodologies for testing"""
-    try:
-        methodologies_db = get_shared_methodologies_db()
-        
-        if methodologies_db:
-            print("📚 Sample methodologies already initialized")
-            return
-
-        sample_methodologies = [
-            {
-                "id": str(uuid.uuid4()),
-                "title": "Comprehensive Web Application Testing",
-                "description": "A complete methodology for testing modern web applications including API endpoints and SPA frameworks.",
-                "methodology_data": {
-                    "id": 1001,
-                    "name": "Web App Comprehensive Test",
-                    "description": "Complete web application security assessment",
-                    "commands": [
-                        "nmap -sS -sV -sC -O {{target}}",
-                        "subfinder -d {{target}}",
-                        "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                        "nikto -h http://{{target}}",
-                        "sqlmap -u 'http://{{target}}/login' --forms --batch"
-                    ],
-                    "steps": [
-                        {
-                            "id": "recon",
-                            "type": "section",
-                            "title": "Information Gathering",
-                            "description": "Passive and active reconnaissance"
-                        },
-                        {
-                            "id": "nmap_scan",
-                            "type": "command",
-                            "title": "Network Scanning",
-                            "description": "Perform comprehensive port scanning",
-                            "command": "nmap -sS -sV -sC -O {{target}}",
-                            "requires_upload": False
-                        }
-                    ]
-                },
-                "author": "Security Expert",
-                "tags": ["web", "api", "comprehensive", "owasp"],
-                "likes": 15,
-                "downloads": 8,
-                "comments": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "author": "PenTester123",
-                        "content": "Great methodology! Used it on my last engagement and found critical issues.",
-                        "rating": 5,
-                        "created_at": time.time() - 86400
-                    }
-                ],
-                "created_at": time.time() - 2592000,  # 30 days ago
-                "updated_at": time.time() - 86400,    # 1 day ago
-                "is_public": True,
-                "views": 42
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "title": "Quick Network Security Scan",
-                "description": "Rapid network assessment for time-constrained engagements. Perfect for initial reconnaissance.",
-                "methodology_data": {
-                    "id": 1002,
-                    "name": "Quick Network Scan",
-                    "description": "Rapid network security assessment",
-                    "commands": [
-                        "nmap -sS -sV --top-ports 1000 {{target}}",
-                        "masscan -p1-1000 {{targetIP}} --rate=1000"
-                    ],
-                    "steps": [
-                        {
-                            "id": "quick_scan",
-                            "type": "command",
-                            "title": "Quick Port Scan",
-                            "description": "Rapid port discovery",
-                            "command": "nmap -sS -sV --top-ports 1000 {{target}}",
-                            "requires_upload": False
-                        }
-                    ]
-                },
-                "author": "Network Specialist",
-                "tags": ["network", "quick", "reconnaissance", "nmap"],
-                "likes": 8,
-                "downloads": 12,
-                "comments": [],
-                "created_at": time.time() - 1728000,  # 20 days ago
-                "updated_at": time.time() - 172800,
-                "is_public": True,
-                "views": 28
-            }
-        ]
-
-        for methodology in sample_methodologies:
-            methodologies_db[methodology['id']] = methodology
-
-        update_popular_tags_cache()
-        print("🎉 Sample shared methodologies initialized")
-
-    except Exception as e:
-        print(f"❌ Error initializing sample methodologies: {e}")
-
-# Initialize sample data when the app starts
-@app.on_event("startup")
-async def startup_event():
-    initialize_sample_shared_methodologies()
-
-# Add to your existing models
-class CommandSuggestionRequest(BaseModel):
-    current_methodology: Dict[str, Any]
-    project_target: str
-    completed_steps: List[str] = []
-    custom_prompt: Optional[str] = None
-    use_online: bool = True
-    provider: str = "gemini"
-
-class CommandExplanationRequest(BaseModel):
-    command: str
-    context: Dict[str, Any]
-    use_online: bool = True
-    provider: str = "gemini"
-
-class CommandSuggestion(BaseModel):
-    command: str
-    description: str
-    category: str
-    risk_level: str
-    prerequisites: Optional[List[str]] = []
-    expected_output: Optional[str] = None
-
-class CommandExplanation(BaseModel):
-    command: str
-    explanation: str
-    purpose: str
-    risks: List[str]
-    alternatives: List[str]
-    best_practices: List[str]
-
-# Add these endpoints to your FastAPI app
-@app.post("/api/ai-command-suggestions", response_model=Dict[str, List[CommandSuggestion]])
-async def ai_command_suggestions(request: CommandSuggestionRequest):
-    """Get AI-powered command suggestions using Gemini"""
-    try:
-        print(f"🎯 AI Command Suggestions request received")
-        print(f"📊 Methodology: {request.current_methodology.get('name', 'Unknown')}")
-        print(f"🎯 Target: {request.project_target}")
-
-        # Prepare comprehensive prompt for AI
-        prompt = f"""
-ACT AS: Senior Cybersecurity Penetration Tester
-
-CONTEXT:
-- Current Methodology: {request.current_methodology.get('name', 'Unknown')} - {request.current_methodology.get('description', 'No description')}
-- Target: {request.project_target}
-- Completed Steps: {request.completed_steps if request.completed_steps else 'None'}
-- Custom Instructions: {request.custom_prompt or 'None'}
-
-TASK: Suggest 3-5 highly relevant penetration testing commands that would be appropriate for the current methodology phase.
-
-For each command, provide:
-1. The exact command string (use {{target}} for the target variable)
-2. Brief description of what it does
-3. Category (Network Reconnaissance, Web Testing, Vulnerability Assessment, Exploitation, Post-Exploitation)
-4. Risk level (low, medium, high) - consider detection risk and target impact
-5. Prerequisites (if any)
-6. Expected typical output
-
-IMPORTANT: Commands should be practical, commonly used in penetration testing, and appropriate for the methodology context.
-
-Return ONLY valid JSON array format, no other text:
-
-[
-  {{
-    "command": "nmap -sV -sC {{target}}",
-    "description": "Service version detection with script scanning",
-    "category": "Network Reconnaissance",
-    "risk_level": "low",
-    "prerequisites": ["Network access"],
-    "expected_output": "Open ports, service versions, script results"
-  }}
-]
-"""
-
-        print(f"📝 Prompt length: {len(prompt)} characters")
-
-        if request.use_online and request.provider == "gemini":
-            print("🚀 Using Gemini for command suggestions...")
-            ai_response = await analyze_with_gemini(prompt)
-            suggestions = parse_command_suggestions(ai_response)
-        else:
-            print("🔄 Using fallback suggestions")
-            suggestions = get_fallback_command_suggestions(request)
-
-        print(f"✅ Generated {len(suggestions)} command suggestions")
-        return {"suggestions": suggestions}
-
-    except Exception as e:
-        print(f"❌ AI command suggestion error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {"suggestions": get_fallback_command_suggestions(request)}
-
-@app.post("/api/ai-explain-command", response_model=CommandExplanation)
-async def ai_explain_command(request: CommandExplanationRequest):
-    """Get AI explanation for a specific command using Gemini"""
-    try:
-        print(f"🔍 Command explanation request: {request.command[:100]}...")
-
-        prompt = f"""
-ACT AS: Senior Cybersecurity Instructor
-
-COMMAND TO EXPLAIN: {request.command}
-TARGET: {request.context.get('target', 'Unknown')}
-METHODOLOGY: {request.context.get('methodology', 'Unknown')}
-
-Provide a comprehensive explanation including:
-
-1. What the command does technically
-2. Its purpose in penetration testing context
-3. Potential risks and considerations
-4. Alternative commands or approaches
-5. Best practices when using this command
-
-Return ONLY valid JSON format:
-
-{{
-  "command": "{request.command}",
-  "explanation": "Detailed technical explanation...",
-  "purpose": "Primary use case in pentesting...",
-  "risks": ["Risk 1", "Risk 2"],
-  "alternatives": ["Alternative command 1", "Alternative command 2"],
-  "best_practices": ["Best practice 1", "Best practice 2"]
-}}
-"""
-
-        if request.use_online and request.provider == "gemini":
-            print("🚀 Using Gemini for command explanation...")
-            ai_response = await analyze_with_gemini(prompt)
-            explanation = parse_command_explanation(ai_response, request.command)
-        else:
-            print("🔄 Using fallback explanation")
-            explanation = get_fallback_command_explanation(request.command, request.context)
-
-        return explanation
-
-    except Exception as e:
-        print(f"❌ Command explanation error: {str(e)}")
-        return get_fallback_command_explanation(request.command, request.context)
-
-# Helper functions
-def parse_command_suggestions(ai_response: str) -> List[CommandSuggestion]:
-    """Parse AI response for command suggestions"""
-    try:
-        import re
-        import json
-        
-        # Look for JSON pattern in the response
-        json_match = re.search(r'\[.*\]', ai_response, re.DOTALL)
-        if json_match:
-            suggestions_data = json.loads(json_match.group())
-            return [CommandSuggestion(**suggestion) for suggestion in suggestions_data]
-        else:
-            print("❌ No JSON array found in AI response")
-            return get_fallback_suggestions_default()
-    except Exception as e:
-        print(f"❌ Error parsing command suggestions: {e}")
-        return get_fallback_suggestions_default()
-
-def parse_command_explanation(ai_response: str, original_command: str) -> CommandExplanation:
-    """Parse AI response for command explanation"""
-    try:
-        import re
-        import json
-        
-        # Look for JSON pattern in the response
-        json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
-        if json_match:
-            explanation_data = json.loads(json_match.group())
-            return CommandExplanation(**explanation_data)
-        else:
-            print("❌ No JSON object found in AI response")
-            return get_fallback_explanation_default(original_command)
-    except Exception as e:
-        print(f"❌ Error parsing command explanation: {e}")
-        return get_fallback_explanation_default(original_command)
-
-def get_fallback_command_suggestions(request: CommandSuggestionRequest) -> List[CommandSuggestion]:
-    """Fallback command suggestions"""
-    return [
-        CommandSuggestion(
-            command=f"nmap -sV -sC {request.project_target}",
-            description="Comprehensive network scan with version detection and script scanning",
-            category="Network Reconnaissance",
-            risk_level="low",
-            prerequisites=["Network access to target"],
-            expected_output="Open ports, service versions, OS detection"
-        ),
-        CommandSuggestion(
-            command=f"gobuster dir -u https://{request.project_target} -w /usr/share/wordlists/dirb/common.txt",
-            description="Directory and file brute force scanning",
-            category="Web Application Testing",
-            risk_level="medium",
-            prerequisites=["Web server accessible"],
-            expected_output="Discovered directories and files"
-        )
-    ]
-
-def get_fallback_suggestions_default() -> List[CommandSuggestion]:
-    """Default fallback suggestions"""
-    return [
-        CommandSuggestion(
-            command="nmap -sV -sC {{target}}",
-            description="Service version detection with default scripts",
-            category="Network Reconnaissance",
-            risk_level="low",
-            prerequisites=["Network access"],
-            expected_output="Service versions and basic vulnerabilities"
-        )
-    ]
-
-def get_fallback_command_explanation(command: str, context: Dict[str, Any]) -> CommandExplanation:
-    """Fallback command explanation"""
-    return CommandExplanation(
-        command=command,
-        explanation=f"This is a security testing command targeting {context.get('target', 'the target')}.",
-        purpose="Security assessment and penetration testing",
-        risks=["May trigger security monitoring", "Could impact target system"],
-        alternatives=["Consider using less intrusive options first"],
-        best_practices=["Test in controlled environment", "Obtain proper authorization"]
-    )
-
-def get_fallback_explanation_default(command: str) -> CommandExplanation:
-    """Default fallback explanation"""
-    return CommandExplanation(
-        command=command,
-        explanation="This command is used in security testing for reconnaissance or vulnerability assessment.",
-        purpose="Security assessment",
-        risks=["Potential detection by security systems", "May cause service disruption"],
-        alternatives=[],
-        best_practices=["Use in authorized environments only", "Follow responsible disclosure practices"]
-    )
-# ============================
-# Health Check Endpoint
-# ============================
-@app.get("/api/health")
-async def health_check():
-    """Comprehensive health check including sharing functionality"""
-    methodologies_db = get_shared_methodologies_db()
-    
-    status = {
-        "api": "healthy",
-        "database": "healthy" if DB_FILE.exists() else "missing",
-        "upload_dir": "healthy" if UPLOAD_DIR.exists() else "missing",
-        "methodology_sharing": {
-            "shared_count": len(methodologies_db),
-            "sample_data_loaded": len(methodologies_db) > 0
-        },
-        "ai_services": {}
-    }
-
-    # Check AI services
-    try:
-        ai_status = await get_ai_status()
-        status["ai_services"] = ai_status
-    except Exception as e:
-        status["ai_services"] = {"error": str(e)}
-
-    return status
-
 @app.get("/")
 def root():
-    methodologies_db = get_shared_methodologies_db()
-    return {
-        "ok": True, 
-        "service": "Pentest Orchestration API",
-        "shared_methodologies_count": len(methodologies_db)
-    }
+    return {"ok": True, "service": "Pentest Orchestration API"}
+
+# ============================
+# Main Execution
+# ============================
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)
