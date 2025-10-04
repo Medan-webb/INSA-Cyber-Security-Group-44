@@ -2,52 +2,6 @@
 
 > **Hybrid pentest platform**: combine automated tooling and guided manual testing to plan, execute, and document penetration tests in a repeatable, auditable way.
 
----
-
-## Table of Contents
-
-1. Executive Summary
-2. Objectives
-3. Platform Overview
-4. Core Features
-
-   4.1 Methodology Templates
-
-   4.2 Tool Integration
-   
-   4.3 Execution Control
-   4.4 Documentation & Evidence Management
-   4.5 Reporting
-   4.6 Extensibility
-5. Advantages Over Fully Automated Tools
-6. Technology Stack
-7. Example Workflow
-8. Future Expansion
-9. Competitive Landscape
-10. Installation
-    10.1 Prerequisites
-    10.2 Clone the repository
-    10.3 Frontend setup (Next.js)
-    10.4 Backend setup (FastAPI)
-    10.5 Docker tips
-    10.6 Running the platform (quick start)
-11. First Use: Create Project & Methodology
-    11.1 Create your first project
-    11.2 Create a methodology
-    11.3 Execute the methodology
-    11.4 Review results
-12. Key Concepts
-    12.1 Projects
-    12.2 Methodologies
-    12.3 Variables
-13. AI Integration (Ollama)
-    13.1 Install & run Ollama (Docker)
-    13.2 Validate AI setup
-14. Testing & Verification
-15. Example Commands & Playbook Snippets
-16. Maintenance, Backups & Security
-17. Contribution & Community
-18. License & Acknowledgements
 
 ---
 
