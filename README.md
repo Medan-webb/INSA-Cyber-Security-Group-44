@@ -73,11 +73,11 @@ Users can create projects, define scope, select or create methodologies (OWASP, 
 ## 6. Technology Stack
 
 * Frontend: React + Tailwind CSS
-* Backend: Python (FastAPI) or Flask
+* Backend: Python (FastAPI) o
 * Execution: Docker containers for running tools securely
 * Database: PostgreSQL
-* Reporting: ReportLab / Pandoc
-* Storage: AWS S3 or local filesystem
+* Reporting:  Pandoc
+* Storage:  local filesystem
 
 ## 7. Example Workflow
 
