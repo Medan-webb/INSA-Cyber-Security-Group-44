@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown, Brain } from "lucide-react"
+import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown, Brain, Home, Activity, Users, Rocket, Star, ArrowRight } from "lucide-react"
 
 import { ManualStepModal } from "./components/ManualStepModal"
 import { ProjectSelector } from "./components/ProjectSelector"
@@ -131,6 +131,9 @@ export default function PentestMethodologies() {
   const [explainingCommand, setExplainingCommand] = useState<string | null>(null)
   const [aiProvider, setAiProvider] = useState<"local" | "online">("online")
   const [onlineProvider, setOnlineProvider] = useState<"gemini" | "gpt">("gemini")
+
+
+  const [activeSection, setActiveSection] = useState<"home" | "methodologies">("home");
 
   useEffect(() => {
     loadMethodologies()
@@ -738,7 +741,15 @@ export default function PentestMethodologies() {
     }, 100);
   }
 
-
+  const getHomeStats = () => {
+    return {
+      totalProjects: projects.length,
+      activeProjects: projects.filter(p => p.status === "active").length,
+      totalMethodologies: methodologies.length,
+      completedSteps: selectedMethodology?.steps?.filter(s => s.completed).length || 0,
+      totalSteps: selectedMethodology?.steps?.length || 0
+    }
+  }
 
   return (
 
@@ -752,9 +763,45 @@ export default function PentestMethodologies() {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-6 w-6 text-gray-800" />
-              <h2 className="text-xl font-bold text-gray-800">Methodologies</h2>
+              <h2 className="text-xl font-bold text-gray-800">Pentest Toolkit</h2>
             </div>
-            <p className="text-sm text-gray-600">Manage your pentest workflows</p>
+            <p className="text-sm text-gray-600">Professional penetration testing platform</p>
+          </div>
+
+
+
+          {/* Navigation Menu */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="space-y-2">
+              <Button
+                variant={activeSection === "home" ? "default" : "ghost"}
+                className="w-full justify-start"
+                onClick={() => setActiveSection("home")}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                variant={activeSection === "methodologies" ? "default" : "ghost"}
+                className="w-full justify-start"
+                onClick={() => setActiveSection("methodologies")}
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Methodologies
+              </Button>
+              <Link href="/reports" className="w-full">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Reports
+                </Button>
+              </Link>
+              <Link href="/share" className="w-full">
+                <Button variant="ghost" className="w-full justify-start">
+                  <Users className="h-4 w-4 mr-2" />
+                  Community
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Current Project Display */}
@@ -780,56 +827,58 @@ export default function PentestMethodologies() {
           )}
 
           {/* Methodologies List */}
-          <Card className="mx-4 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle>
-                <Button
-                  onClick={() => setIsAddDialogOpen(true)}
-                  size="sm"
-                  className="bg-gray-600 hover:bg-gray-700 text-white h-8 w-8 p-0"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {methodologies.length === 0 ? (
-                <div className="text-center py-6 text-gray-500">
-                  <Shield className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">No methodologies yet</p>
+          {activeSection === "methodologies" && (
+            <Card className="mx-4 shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm text-gray-800">Methodologies ({methodologies.length})</CardTitle>
+                  <Button
+                    onClick={() => setIsAddDialogOpen(true)}
+                    size="sm"
+                    className="bg-gray-600 hover:bg-gray-700 text-white h-8 w-8 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {methodologies.map((methodology) => (
-                    <div
-                      key={methodology.id}
-                      className={`border rounded-lg p-3 transition-colors cursor-pointer ${selectedMethodology?.id === methodology.id
-                        ? "bg-gray-100 border-gray-300"
-                        : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
-                      onClick={() => setSelectedMethodology(methodology)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                          <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
+              </CardHeader>
+              <CardContent>
+                {methodologies.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500">
+                    <Shield className="h-8 w-8 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No methodologies yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {methodologies.map((methodology) => (
+                      <div
+                        key={methodology.id}
+                        className={`border rounded-lg p-3 transition-colors cursor-pointer ${selectedMethodology?.id === methodology.id
+                          ? "bg-gray-100 border-gray-300"
+                          : "bg-white border-gray-200 hover:bg-gray-50"
+                          }`}
+                        onClick={() => setSelectedMethodology(methodology)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                            <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Add Methodology Dialog */}
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -915,795 +964,985 @@ export default function PentestMethodologies() {
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="font-semibold">Pentest Dashboard</h1>
+          <h1 className="font-semibold">
+            {activeSection === "home" ? "Dashboard" : "Pentest Methodologies"}
+          </h1>
           <div className="w-9" />
         </div>
 
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-4xl mx-auto">
-            {!currentProject ? (
-              // Project Selection View
-              <div className="text-center space-y-6">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <FolderOpen className="h-12 w-12 text-primary" />
+          {activeSection === "home" ? (
+            <div className="max-w-6xl mx-auto space-y-8">
+              <div className="text-center space-y-4">
+                <div className="flex items-center justify-center gap-4">
+                  <Shield className="h-12 w-12 text-primary" />
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                    Pentest Toolkit
+                  </h1>
                 </div>
-                <h1 className="text-4xl font-bold mb-2">Select a Project</h1>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  Choose an existing project or create a new one to start your penetration testing workflow.
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                  Professional penetration testing platform with AI-powered workflows and automated methodologies
                 </p>
-
-                <ProjectSelector
-                  currentProject={currentProject}
-                  onProjectSelect={handleProjectSelect}
-                  onProjectCreate={handleProjectCreate}
-                />
               </div>
-            ) : selectedMethodology ? (
-              // Methodology Execution View
-              <div className="space-y-6">
-                <div className="flex items-center justify-between mb-6">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedMethodology(null)}>
-                    <Shield className="h-4 w-4" />Back to Dashboard
-                  </Button>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm text-muted-foreground">
-                      Project: <span className="font-semibold text-green-600">{currentProject.name}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="shadow-lg border-2 border-blue-200/80 backdrop-blur-sm bg-white/95">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Projects</p>
+                        <p className="text-3xl font-bold text-gray-800">{getHomeStats().totalProjects}</p>
+                      </div>
+                      <div className="p-3 bg-blue-100 rounded-full">
+                        <FolderOpen className="h-6 w-6 text-blue-600" />
+                      </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowProjectSelector(true)}
-                    >
-                      <FolderOpen className="h-4 w-4 mr-2" />
-                      Change
-                    </Button>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="flex gap-2">
+                <Card className="shadow-lg border-2 border-green-200/80 backdrop-blur-sm bg-white/95">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Active Projects</p>
+                        <p className="text-3xl font-bold text-gray-800">{getHomeStats().activeProjects}</p>
+                      </div>
+                      <div className="p-3 bg-green-100 rounded-full">
+                        <Activity className="h-6 w-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                    <Link href="/reports">
-                      <FileText className="h-4 w-4" />
-                      Reports
-                    </Link>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={exportToJSON} size="sm">
-                      <Download className="h-4 w-4" />Export JSONs
-                    </Button>
-                  </div>
-                  <Link href="/share" className="text-gray-700 hover:text-blue-600">
-                    Community
-                  </Link>
+                <Card className="shadow-lg border-2 border-purple-200/80 backdrop-blur-sm bg-white/95">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Methodologies</p>
+                        <p className="text-3xl font-bold text-gray-800">{getHomeStats().totalMethodologies}</p>
+                      </div>
+                      <div className="p-3 bg-purple-100 rounded-full">
+                        <Shield className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                </div>
+                <Card className="shadow-lg border-2 border-orange-200/80 backdrop-blur-sm bg-white/95">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Completion Rate</p>
+                        <p className="text-3xl font-bold text-gray-800">
+                          {getHomeStats().totalSteps > 0
+                            ? `${Math.round((getHomeStats().completedSteps / getHomeStats().totalSteps) * 100)}%`
+                            : "0%"
+                          }
+                        </p>
+                      </div>
+                      <div className="p-3 bg-orange-100 rounded-full">
+                        <Star className="h-6 w-6 text-orange-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                <div className="flex items-center gap-3">
-                  <Shield className="h-8 w-8 text-primary" />
-                  <div>
-                    <h1 className="text-3xl font-bold">{selectedMethodology.name}</h1>
-                    <div className="text-sm text-muted-foreground mt-1">{selectedMethodology.description}</div>
-                  </div>
-                </div>
-
-                {/* Project Target */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Globe className="h-5 w-5" />
-                      Project Target
+                      <Rocket className="h-5 w-5" />
+                      Quick Start
                     </CardTitle>
+                    <CardDescription>
+                      Start a new penetration testing project
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2 mb-2">
-                      <Input
-                        placeholder="Enter target (e.g., google.com)"
-                        value={currentProject.target}
-                        onChange={(e) => updateProjectTarget(currentProject.id, e.target.value)}
-                        className="flex-1"
-                      />
-                    </div>
-                    {currentProject.targetIP && (
-                      <p className="text-sm text-muted-foreground">
-                        Resolved IP: <code className="bg-muted px-2 py-1 rounded">{currentProject.targetIP}</code>
-                      </p>
+                  <CardContent className="space-y-4">
+                    {!currentProject ? (
+                      <div className="text-center space-y-4">
+                        <FolderOpen className="h-12 w-12 text-gray-400 mx-auto" />
+                        <p className="text-gray-600">No active project</p>
+                        <Button
+                          onClick={() => setShowProjectSelector(true)}
+                          className="bg-gray-800 hover:bg-gray-900 text-white"
+                        >
+                          Select or Create Project
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            <FolderOpen className="h-8 w-8 text-green-600" />
+                            <div>
+                              <h3 className="font-semibold text-green-800">{currentProject.name}</h3>
+                              <p className="text-sm text-green-600">Target: {currentProject.target}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            onClick={() => setActiveSection("methodologies")}
+                            className="bg-gray-800 hover:bg-gray-900 text-white"
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Methodologies
+                          </Button>
+                          <Link href="/reports" className="w-full">
+                            <Button variant="outline" className="w-full">
+                              <FileText className="h-4 w-4 mr-2" />
+                              View Reports
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
-                {/* External Services Scan */}
-                <Card className="shadow-lg border-2 border-blue-200/80 backdrop-blur-sm bg-white/95">
+
+                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Search className="h-5 w-5" />
-                      External Services Scan
+                      <Activity className="h-5 w-5" />
+                      Community & Resources
                     </CardTitle>
+                    <CardDescription>
+                      Explore shared methodologies and resources
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={runExternalScan}
-                        disabled={isScanning || !currentProject?.target}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {isScanning ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                            Scanning...
-                          </>
-                        ) : (
-                          <>
-                            <Search className="h-4 w-4 mr-2" />
-                            Scan with Shodan & VirusTotal
-                          </>
-                        )}
+                    <div className="space-y-3">
+                      <Link href="/share">
+                        <Button variant="outline" className="w-full justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Community Methodologies
+                          </div>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+
+                      <Button variant="outline" className="w-full justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-4 w-4" />
+                          AI Command Suggestions
+                        </div>
+                        <ArrowRight className="h-4 w-4" />
                       </Button>
 
-                      {externalScanResults && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowScanResults(!showScanResults)}
-                        >
-                          {showScanResults ? "Hide Results" : "Show Results"}
-                        </Button>
-                      )}
+                      <Button variant="outline" className="w-full justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Documentation
+                        </div>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
                     </div>
 
-                    {showScanResults && externalScanResults && (
-                      <div className="space-y-4">
-                        {/* Shodan Results */}
-                        {externalScanResults.shodan && (
-                          <div className="border rounded-lg p-4 bg-blue-50">
-                            <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                              <Globe className="h-4 w-4" />
-                              Shodan Results
-                            </h3>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-800 text-sm mb-2">Pro Tip</h4>
+                      <p className="text-blue-700 text-sm">
+                        Use AI-powered command suggestions to enhance your methodologies with expert-level commands and explanations.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-medium">IP:</span> {externalScanResults.shodan.ip}
-                              </div>
-                              <div>
-                                <span className="font-medium">Organization:</span> {externalScanResults.shodan.org}
-                              </div>
-                              <div>
-                                <span className="font-medium">Open Ports:</span> {externalScanResults.shodan.ports?.join(", ") || "None"}
-                              </div>
-                              <div>
-                                <span className="font-medium">Hostnames:</span> {externalScanResults.shodan.hostnames?.join(", ") || "None"}
-                              </div>
+              {methodologies.length > 0 && (
+                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Recent Methodologies
+                    </CardTitle>
+                    <CardDescription>
+                      Your recently used testing methodologies
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {methodologies.slice(0, 3).map((methodology) => (
+                        <div
+                          key={methodology.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedMethodology(methodology)
+                            setActiveSection("methodologies")
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Shield className="h-4 w-4 text-gray-600" />
+                            <div>
+                              <h3 className="font-semibold text-sm">{methodology.name}</h3>
+                              <p className="text-xs text-gray-600">
+                                {methodology.steps?.length || 0} steps
+                              </p>
                             </div>
-
-                            {externalScanResults.shodan.data && externalScanResults.shodan.data.length > 0 && (
-                              <div className="mt-3">
-                                <h4 className="font-medium text-blue-700 mb-2">Service Details:</h4>
-                                <div className="space-y-2">
-                                  {externalScanResults.shodan.data.map((service, index) => (
-                                    <div key={index} className="bg-white p-2 rounded border text-xs">
-                                      <div className="flex justify-between">
-                                        <span className="font-medium">Port {service.port}/{service.transport}</span>
-                                        {service.product && (
-                                          <span>{service.product} {service.version}</span>
-                                        )}
-                                      </div>
-                                      {service.banner && (
-                                        <div className="mt-1 font-mono text-gray-600 truncate">
-                                          {service.banner}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
+                          <Button variant="ghost" size="sm">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto">
+              {!currentProject ? (
+                <div className="text-center space-y-6">
+                  <div className="flex items-center justify-center gap-3 mb-6">
+                    <FolderOpen className="h-12 w-12 text-primary" />
+                  </div>
+                  <h1 className="text-4xl font-bold mb-2">Select a Project</h1>
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                    Choose an existing project or create a new one to start your penetration testing workflow.
+                  </p>
+
+                  <ProjectSelector
+                    currentProject={currentProject}
+                    onProjectSelect={handleProjectSelect}
+                    onProjectCreate={handleProjectCreate}
+                  />
+                </div>
+              ) : selectedMethodology ? (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedMethodology(null)}>
+                      <Shield className="h-4 w-4" />Back to Dashboard
+                    </Button>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm text-muted-foreground">
+                        Project: <span className="font-semibold text-green-600">{currentProject.name}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowProjectSelector(true)}
+                      >
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Change
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Link href="/reports">
+                        <Button variant="outline" size="sm">
+                          <FileText className="h-4 w-4" />
+                          Reports
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={exportToJSON} size="sm">
+                        <Download className="h-4 w-4" />Export JSON
+                      </Button>
+                    </div>
+                    <Link href="/share" className="text-gray-700 hover:text-blue-600">
+                      Community
+                    </Link>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-8 w-8 text-primary" />
+                    <div>
+                      <h1 className="text-3xl font-bold">{selectedMethodology.name}</h1>
+                      <div className="text-sm text-muted-foreground mt-1">{selectedMethodology.description}</div>
+                    </div>
+                  </div>
+
+                  <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Globe className="h-5 w-5" />
+                        Project Target
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2 mb-2">
+                        <Input
+                          placeholder="Enter target (e.g., google.com)"
+                          value={currentProject.target}
+                          onChange={(e) => updateProjectTarget(currentProject.id, e.target.value)}
+                          className="flex-1"
+                        />
+                      </div>
+                      {currentProject.targetIP && (
+                        <p className="text-sm text-muted-foreground">
+                          Resolved IP: <code className="bg-muted px-2 py-1 rounded">{currentProject.targetIP}</code>
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-lg border-2 border-blue-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Search className="h-5 w-5" />
+                        External Services Scan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={runExternalScan}
+                          disabled={isScanning || !currentProject?.target}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isScanning ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                              Scanning...
+                            </>
+                          ) : (
+                            <>
+                              <Search className="h-4 w-4 mr-2" />
+                              Scan with Shodan & VirusTotal
+                            </>
+                          )}
+                        </Button>
+
+                        {externalScanResults && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowScanResults(!showScanResults)}
+                          >
+                            {showScanResults ? "Hide Results" : "Show Results"}
+                          </Button>
                         )}
+                      </div>
 
-                        {/* VirusTotal Results */}
-                        {externalScanResults.virusTotal && (
-                          <div className="border rounded-lg p-4 bg-green-50">
-                            <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                              <Shield className="h-4 w-4" />
-                              VirusTotal Results
-                            </h3>
-
-
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1">
-                                  {maliciousCount > 0 ? (
-                                    <XCircle className="h-4 w-4 text-red-500" />
-                                  ) : suspiciousCount > 0 ? (
-                                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                  )}
-                                  <span className="font-medium">
-                                    Security Status:{" "}
-                                    {maliciousCount > 0 ? "Malicious" :
-                                      suspiciousCount > 0 ? "Suspicious" : "Clean"}
-                                  </span>
-                                </div>
-
-                                <div className="text-sm text-gray-600">
-                                  {maliciousCount} malicious / {suspiciousCount} suspicious / {totalEngines} total engines
-                                </div>
-                              </div>
+                      {showScanResults && externalScanResults && (
+                        <div className="space-y-4">
+                          {externalScanResults.shodan && (
+                            <div className="border rounded-lg p-4 bg-blue-50">
+                              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                                <Globe className="h-4 w-4" />
+                                Shodan Results
+                              </h3>
 
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <span className="font-medium">Reputation:</span>{" "}
-                                  {externalScanResults.virusTotal.data.attributes.reputation || "N/A"}
+                                  <span className="font-medium">IP:</span> {externalScanResults.shodan.ip}
                                 </div>
                                 <div>
-                                  <span className="font-medium">Tags:</span>{" "}
-                                  {externalScanResults.virusTotal.data.attributes.tags?.join(", ") || "None"}
+                                  <span className="font-medium">Organization:</span> {externalScanResults.shodan.org}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Open Ports:</span> {externalScanResults.shodan.ports?.join(", ") || "None"}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Hostnames:</span> {externalScanResults.shodan.hostnames?.join(", ") || "None"}
                                 </div>
                               </div>
 
-                              {maliciousCount > 0 && (
-                                <div className="mt-2">
-                                  <h4 className="font-medium text-red-700 mb-2">Threat Detections:</h4>
-                                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                                    {Object.entries(externalScanResults.virusTotal.data.attributes.last_analysis_results)
-                                      .filter(([_, result]) => result.category === "malicious")
-                                      .map(([engine, result]) => (
-                                        <div key={engine} className="flex justify-between text-xs bg-red-100 p-1 rounded">
-                                          <span className="font-medium">{engine}</span>
-                                          <span className="text-red-700">{result.result}</span>
+                              {externalScanResults.shodan.data && externalScanResults.shodan.data.length > 0 && (
+                                <div className="mt-3">
+                                  <h4 className="font-medium text-blue-700 mb-2">Service Details:</h4>
+                                  <div className="space-y-2">
+                                    {externalScanResults.shodan.data.map((service, index) => (
+                                      <div key={index} className="bg-white p-2 rounded border text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="font-medium">Port {service.port}/{service.transport}</span>
+                                          {service.product && (
+                                            <span>{service.product} {service.version}</span>
+                                          )}
                                         </div>
-                                      ))}
+                                        {service.banner && (
+                                          <div className="mt-1 font-mono text-gray-600 truncate">
+                                            {service.banner}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               )}
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Error State */}
-                        {externalScanResults.error && (
-                          <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                            <div className="flex items-center gap-2 text-red-800">
-                              <AlertTriangle className="h-4 w-4" />
-                              <span>Scan failed: {externalScanResults.error}</span>
+                          {externalScanResults.virusTotal && (
+                            <div className="border rounded-lg p-4 bg-green-50">
+                              <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                                <Shield className="h-4 w-4" />
+                                VirusTotal Results
+                              </h3>
+
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-1">
+                                    {externalScanResults.virusTotal.data.attributes.last_analysis_stats.malicious > 0 ? (
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                    ) : externalScanResults.virusTotal.data.attributes.last_analysis_stats.suspicious > 0 ? (
+                                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                    ) : (
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    )}
+                                    <span className="font-medium">
+                                      Security Status:{" "}
+                                      {externalScanResults.virusTotal.data.attributes.last_analysis_stats.malicious > 0 ? "Malicious" :
+                                        externalScanResults.virusTotal.data.attributes.last_analysis_stats.suspicious > 0 ? "Suspicious" : "Clean"}
+                                    </span>
+                                  </div>
+
+                                  <div className="text-sm text-gray-600">
+                                    {externalScanResults.virusTotal.data.attributes.last_analysis_stats.malicious} malicious /
+                                    {externalScanResults.virusTotal.data.attributes.last_analysis_stats.suspicious} suspicious /
+                                    {externalScanResults.virusTotal.data.attributes.last_analysis_stats.harmless +
+                                      externalScanResults.virusTotal.data.attributes.last_analysis_stats.malicious +
+                                      externalScanResults.virusTotal.data.attributes.last_analysis_stats.suspicious} total engines
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium">Reputation:</span>{" "}
+                                    {externalScanResults.virusTotal.data.attributes.reputation || "N/A"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Tags:</span>{" "}
+                                    {externalScanResults.virusTotal.data.attributes.tags?.join(", ") || "None"}
+                                  </div>
+                                </div>
+
+                                {externalScanResults.virusTotal.data.attributes.last_analysis_stats.malicious > 0 && (
+                                  <div className="mt-2">
+                                    <h4 className="font-medium text-red-700 mb-2">Threat Detections:</h4>
+                                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                                      {Object.entries(externalScanResults.virusTotal.data.attributes.last_analysis_results)
+                                        .filter(([_, result]) => result.category === "malicious")
+                                        .map(([engine, result]) => (
+                                          <div key={engine} className="flex justify-between text-xs bg-red-100 p-1 rounded">
+                                            <span className="font-medium">{engine}</span>
+                                            <span className="text-red-700">{result.result}</span>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-sm text-red-600 mt-1">
-                              Please check your API keys and target configuration.
-                            </p>
-                          </div>
-                        )}
+                          )}
 
-                        {/* No Results */}
-                        {!externalScanResults.shodan && !externalScanResults.virusTotal && !externalScanResults.error && (
-                          <div className="text-center py-4 text-gray-500">
-                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No external scan data available for this target.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                {/* Steps Management */}
-                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Terminal className="h-5 w-5" />
-                      Steps ({selectedMethodology.steps?.length || 0})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Add Step Form */}
-                    <div className="border-b pb-4">
-                      <div className="flex gap-2 mb-3">
-                        <select
-                          value={newStepType}
-                          onChange={(e) => setNewStepType(e.target.value as "command" | "manual")}
-                          className="border rounded-md px-3 py-2 text-sm"
-                        >
-                          <option value="command">Command</option>
-                          <option value="manual">Manual Step</option>
-                        </select>
-                        <Input
-                          placeholder={
-                            newStepType === "command"
-                              ? "Enter command..."
-                              : "Describe manual step..."
-                          }
-                          value={newStepContent}
-                          onChange={(e) => setNewStepContent(e.target.value)}
-                          className="font-mono text-sm flex-1"
-                        />
-                        <Button
-                          onClick={addStepToMethodology}
-                          disabled={!newStepContent.trim()}
-                          size="sm"
-                          className="bg-cyan-600 hover:bg-cyan-700"
-                        >
-                          Add Step
-                        </Button>
-                      </div>
+                          {externalScanResults.error && (
+                            <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                              <div className="flex items-center gap-2 text-red-800">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span>Scan failed: {externalScanResults.error}</span>
+                              </div>
+                              <p className="text-sm text-red-600 mt-1">
+                                Please check your API keys and target configuration.
+                              </p>
+                            </div>
+                          )}
 
-                      {/* Execution Controls */}
-                      {selectedMethodology.steps?.length > 0 && (
-                        <div className="flex gap-2 mb-3">
-                          <Button
-                            onClick={runAllSteps}
-                            disabled={executionState.isRunning}
-                            className="bg-cyan-600 hover:bg-cyan-700"
-                          >
-                            {executionState.isRunning ? "Running..." : "Run All Steps"}
-                          </Button>
-                          {executionState.isRunning && (
-                            <Button
-                              onClick={stopExecution}
-                              variant="outline"
-                              className="bg-red-600 hover:bg-red-700 text-white border-red-700"
-                            >
-                              ⏹️ Stop Execution
-                            </Button>
+                          {!externalScanResults.shodan && !externalScanResults.virusTotal && !externalScanResults.error && (
+                            <div className="text-center py-4 text-gray-500">
+                              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>No external scan data available for this target.</p>
+                            </div>
                           )}
                         </div>
                       )}
-                    </div>
+                    </CardContent>
+                  </Card>
 
-                    {/* Steps List */}
-                    {selectedMethodology.steps?.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedMethodology.steps.map((step, index) => (
-                          <div
-                            key={step.id}
-                            className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''
-                              }`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, step.id)}
-                            onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, step.id)}
+                  <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Terminal className="h-5 w-5" />
+                        Steps ({selectedMethodology.steps?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="border-b pb-4">
+                        <div className="flex gap-2 mb-3">
+                          <select
+                            value={newStepType}
+                            onChange={(e) => setNewStepType(e.target.value as "command" | "manual")}
+                            className="border rounded-md px-3 py-2 text-sm"
                           >
-                            {/* Drag Handle */}
-                            <div className="cursor-move text-gray-400 hover:text-gray-600">
-                              <GripVertical className="h-4 w-4" />
-                            </div>
+                            <option value="command">Command</option>
+                            <option value="manual">Manual Step</option>
+                          </select>
+                          <Input
+                            placeholder={
+                              newStepType === "command"
+                                ? "Enter command..."
+                                : "Describe manual step..."
+                            }
+                            value={newStepContent}
+                            onChange={(e) => setNewStepContent(e.target.value)}
+                            className="font-mono text-sm flex-1"
+                          />
+                          <Button
+                            onClick={addStepToMethodology}
+                            disabled={!newStepContent.trim()}
+                            size="sm"
+                            className="bg-cyan-600 hover:bg-cyan-700"
+                          >
+                            Add Step
+                          </Button>
+                        </div>
 
-                            {/* Completion Indicator */}
-                            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        {selectedMethodology.steps?.length > 0 && (
+                          <div className="flex gap-2 mb-3">
+                            <Button
+                              onClick={runAllSteps}
+                              disabled={executionState.isRunning}
+                              className="bg-cyan-600 hover:bg-cyan-700"
+                            >
+                              {executionState.isRunning ? "Running..." : "Run All Steps"}
+                            </Button>
+                            {executionState.isRunning && (
+                              <Button
+                                onClick={stopExecution}
+                                variant="outline"
+                                className="bg-red-600 hover:bg-red-700 text-white border-red-700"
+                              >
+                                ⏹️ Stop Execution
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-purple-100 text-purple-800'
-                                  }`}>
-                                  {step.type}
-                                </span>
+                      {selectedMethodology.steps?.length > 0 ? (
+                        <div className="space-y-3">
+                          {selectedMethodology.steps.map((step, index) => (
+                            <div
+                              key={step.id}
+                              className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''
+                                }`}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, step.id)}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, step.id)}
+                            >
+                              <div className="cursor-move text-gray-400 hover:text-gray-600">
+                                <GripVertical className="h-4 w-4" />
+                              </div>
 
-                                {editingStepId === step.id ? (
-                                  <div className="flex-1 flex gap-2">
-                                    <Input
-                                      value={editingStepContent}
-                                      onChange={(e) => setEditingStepContent(e.target.value)}
-                                      className="font-mono text-sm flex-1"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') saveEditStep()
-                                        if (e.key === 'Escape') cancelEditStep()
-                                      }}
-                                    />
-                                    <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
-                                      <Save className="h-3 w-3" />
-                                    </Button>
-                                    <Button size="sm" variant="outline" onClick={cancelEditStep}>
-                                      <X className="h-3 w-3" />
-                                    </Button>
+                              <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
+
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                    {step.type}
+                                  </span>
+
+                                  {editingStepId === step.id ? (
+                                    <div className="flex-1 flex gap-2">
+                                      <Input
+                                        value={editingStepContent}
+                                        onChange={(e) => setEditingStepContent(e.target.value)}
+                                        className="font-mono text-sm flex-1"
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') saveEditStep()
+                                          if (e.key === 'Escape') cancelEditStep()
+                                        }}
+                                      />
+                                      <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
+                                        <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={cancelEditStep}>
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <code className="text-sm font-mono flex-1">{step.content}</code>
+                                  )}
+                                </div>
+                                {step.evidence && step.evidence.length > 0 && (
+                                  <div className="text-xs text-gray-600">
+                                    Evidence: {step.evidence.join(', ')}
                                   </div>
-                                ) : (
-                                  <code className="text-sm font-mono flex-1">{step.content}</code>
                                 )}
                               </div>
-                              {step.evidence && step.evidence.length > 0 && (
-                                <div className="text-xs text-gray-600">
-                                  Evidence: {step.evidence.join(', ')}
-                                </div>
-                              )}
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1">
-                              {/* Move Buttons */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => moveStep(step.id, 'up')}
-                                disabled={index === 0}
-                                className="h-8 w-8 p-0"
-                              >
-                                <ArrowUp className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => moveStep(step.id, 'down')}
-                                disabled={index === selectedMethodology.steps.length - 1}
-                                className="h-8 w-8 p-0"
-                              >
-                                <ArrowDown className="h-3 w-3" />
-                              </Button>
-
-                              {/* Edit Button */}
-                              {editingStepId !== step.id && (
+                              <div className="flex items-center gap-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => startEditStep(step.id, step.content)}
+                                  onClick={() => moveStep(step.id, 'up')}
+                                  disabled={index === 0}
                                   className="h-8 w-8 p-0"
                                 >
-                                  <Edit className="h-3 w-3" />
+                                  <ArrowUp className="h-3 w-3" />
                                 </Button>
-                              )}
-
-                              {/* Run Button (for commands) */}
-                              {/* {step.type === "command" && editingStepId !== step.id && (
                                 <Button
+                                  variant="ghost"
                                   size="sm"
-                                  onClick={() => runCommand(step.content)}
-                                  className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                  onClick={() => moveStep(step.id, 'down')}
+                                  disabled={index === selectedMethodology.steps.length - 1}
+                                  className="h-8 w-8 p-0"
                                 >
-                                  Run
+                                  <ArrowDown className="h-3 w-3" />
                                 </Button>
-                              )} */}
 
-                              {step.type === "command" && editingStepId !== step.id && (
-                                <>
+                                {editingStepId !== step.id && (
                                   <Button
+                                    variant="ghost"
                                     size="sm"
-                                    onClick={() => runCommand(step.content)}
-                                    className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                    onClick={() => startEditStep(step.id, step.content)}
+                                    className="h-8 w-8 p-0"
                                   >
-                                    Run
+                                    <Edit className="h-3 w-3" />
                                   </Button>
-                                  {/*  Explain button */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => explainSelectedCommand(step.content)}
-                                    disabled={explainingCommand === step.content}
-                                    className="flex-shrink-0 h-8"
-                                  >
-                                    {explainingCommand === step.content ? (
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
-                                    ) : (
-                                      <HelpCircle className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </>
-                              )}
+                                )}
 
-                              {/* Delete Button */}
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deleteStep(step.id)}
-                                className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                                {step.type === "command" && editingStepId !== step.id && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => runCommand(step.content)}
+                                      className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                    >
+                                      Run
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => explainSelectedCommand(step.content)}
+                                      disabled={explainingCommand === step.content}
+                                      className="flex-shrink-0 h-8"
+                                    >
+                                      {explainingCommand === step.content ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
+                                      ) : (
+                                        <HelpCircle className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  </>
+                                )}
+
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteStep(step.id)}
+                                  className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">No steps added yet.</p>
-                    )}
-                  </CardContent>
-                </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No steps added yet.</p>
+                      )}
+                    </CardContent>
+                  </Card>
 
+                  <Card className="shadow-lg border-2 border-purple-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-5 w-5 text-purple-600" />
+                          AI Command Suggestions
+                        </div>
 
-                {/* AI Command Suggestions */}
-                <Card className="shadow-lg border-2 border-purple-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-purple-600" />
-                        AI Command Suggestions
-                      </div>
-
-                      {/* AI Provider Selection */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <select
-                          value={aiProvider}
-                          onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
-                          className="text-sm border rounded px-2 py-1"
-                        >
-                          <option value="local">Local AI</option>
-                          <option value="online">Online AI</option>
-                        </select>
-
-                        {aiProvider === "online" && (
+                        <div className="flex items-center gap-2 text-sm">
                           <select
-                            value={onlineProvider}
-                            onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
+                            value={aiProvider}
+                            onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
                             className="text-sm border rounded px-2 py-1"
                           >
-                            <option value="gemini">Gemini</option>
-                            <option value="gpt">GPT</option>
+                            <option value="local">Local AI</option>
+                            <option value="online">Online AI</option>
                           </select>
+
+                          {aiProvider === "online" && (
+                            <select
+                              value={onlineProvider}
+                              onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
+                              className="text-sm border rounded px-2 py-1"
+                            >
+                              <option value="gemini">Gemini</option>
+                              <option value="gpt">GPT</option>
+                            </select>
+                          )}
+                        </div>
+                      </CardTitle>
+                      <CardDescription>
+                        Get AI-powered command suggestions based on your current methodology and target
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={fetchAISuggestions}
+                          disabled={isLoadingSuggestions || !selectedMethodology || !currentProject}
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          {isLoadingSuggestions ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Suggest Commands
+                            </>
+                          )}
+                        </Button>
+
+                        {showSuggestions && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowSuggestions(false)}
+                          >
+                            Hide Suggestions
+                          </Button>
                         )}
                       </div>
-                    </CardTitle>
-                    <CardDescription>
-                      Get AI-powered command suggestions based on your current methodology and target
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    {/* Suggestion Controls */}
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={fetchAISuggestions}
-                        disabled={isLoadingSuggestions || !selectedMethodology || !currentProject}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                      >
-                        {isLoadingSuggestions ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Suggest Commands
-                          </>
-                        )}
-                      </Button>
 
                       {showSuggestions && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowSuggestions(false)}
-                        >
-                          Hide Suggestions
-                        </Button>
+                        <div className="space-y-3">
+                          {isLoadingSuggestions ? (
+                            <div className="text-center py-4">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                              <p className="text-sm text-gray-600 mt-2">AI is analyzing your methodology...</p>
+                            </div>
+                          ) : aiSuggestions.length > 0 ? (
+                            aiSuggestions.map((suggestion, index) => (
+                              <div
+                                key={index}
+                                className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-md transition-all"
+                              >
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <code className="text-sm font-mono bg-black text-green-400 px-2 py-1 rounded flex-1">
+                                        {suggestion.command.replace(/\{\{target\}\}/g, currentProject?.target || '{{target}}')}
+                                      </code>
+                                      <Badge
+                                        className={`
+                                    ${suggestion.risk_level === 'high' ? 'bg-red-100 text-red-800' :
+                                            suggestion.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                              'bg-green-100 text-green-800'}
+                                  `}
+                                      >
+                                        {suggestion.risk_level.toUpperCase()} RISK
+                                      </Badge>
+                                    </div>
+
+                                    <p className="text-sm text-gray-700 mb-2">{suggestion.description}</p>
+
+                                    <div className="flex items-center gap-4 text-xs text-gray-600">
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        {suggestion.category}
+                                      </span>
+                                      {suggestion.prerequisites && suggestion.prerequisites.length > 0 && (
+                                        <span>Requires: {suggestion.prerequisites.join(', ')}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => addSuggestedCommand(suggestion.command)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add to Methodology
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => explainSelectedCommand(suggestion.command)}
+                                    disabled={explainingCommand === suggestion.command}
+                                  >
+                                    {explainingCommand === suggestion.command ? (
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-1" />
+                                    ) : (
+                                      <HelpCircle className="h-3 w-3 mr-1" />
+                                    )}
+                                    Explain
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => runCommand(suggestion.command)}
+                                    className="ml-auto"
+                                  >
+                                    <Zap className="h-3 w-3 mr-1" />
+                                    Run Now
+                                  </Button>
+                                </div>
+
+                                {commandExplanation && explainingCommand === suggestion.command && (
+                                  <div className="mt-3 p-3 bg-white border rounded-lg">
+                                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                      <Bot className="h-4 w-4 text-blue-600" />
+                                      AI Explanation
+                                    </h4>
+
+                                    <div className="space-y-2 text-sm">
+                                      <div>
+                                        <span className="font-medium">Purpose:</span>
+                                        <p className="text-gray-700">{commandExplanation.purpose}</p>
+                                      </div>
+
+                                      <div>
+                                        <span className="font-medium">Explanation:</span>
+                                        <p className="text-gray-700">{commandExplanation.explanation}</p>
+                                      </div>
+
+                                      {commandExplanation.risks.length > 0 && (
+                                        <div>
+                                          <span className="font-medium text-red-600">Risks:</span>
+                                          <ul className="list-disc list-inside text-gray-700">
+                                            {commandExplanation.risks.map((risk, i) => (
+                                              <li key={i}>{risk}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+
+                                      {commandExplanation.best_practices.length > 0 && (
+                                        <div>
+                                          <span className="font-medium text-green-600">Best Practices:</span>
+                                          <ul className="list-disc list-inside text-gray-700">
+                                            {commandExplanation.best_practices.map((practice, i) => (
+                                              <li key={i}>{practice}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-gray-500">
+                              <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>No suggestions available. Try generating suggestions with AI.</p>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
+                    </CardContent>
+                  </Card>
 
-                    {/* AI Suggestions */}
-                    {showSuggestions && (
-                      <div className="space-y-3">
-                        {isLoadingSuggestions ? (
-                          <div className="text-center py-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                            <p className="text-sm text-gray-600 mt-2">AI is analyzing your methodology...</p>
-                          </div>
-                        ) : aiSuggestions.length > 0 ? (
-                          aiSuggestions.map((suggestion, index) => (
-                            <div
-                              key={index}
-                              className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-md transition-all"
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <code className="text-sm font-mono bg-black text-green-400 px-2 py-1 rounded flex-1">
-                                      {suggestion.command.replace(/\{\{target\}\}/g, currentProject?.target || '{{target}}')}
-                                    </code>
-                                    <Badge
-                                      className={`
-                        ${suggestion.risk_level === 'high' ? 'bg-red-100 text-red-800' :
-                                          suggestion.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-green-100 text-green-800'}
-                      `}
-                                    >
-                                      {suggestion.risk_level.toUpperCase()} RISK
-                                    </Badge>
-                                  </div>
-
-                                  <p className="text-sm text-gray-700 mb-2">{suggestion.description}</p>
-
-                                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                      {suggestion.category}
-                                    </span>
-                                    {suggestion.prerequisites && suggestion.prerequisites.length > 0 && (
-                                      <span>Requires: {suggestion.prerequisites.join(', ')}</span>
-                                    )}
-                                  </div>
-                                </div>
+                  <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Terminal className="h-5 w-5" />
+                          Terminal Results
+                        </CardTitle>
+                        {terminalOutput.length > 0 && (
+                          <Button size="sm" variant="outline" onClick={clearTerminalOutput}>
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto border border-cyan-500/30">
+                        {terminalOutput.length > 0 ? (
+                          terminalOutput.map((result, idx) => (
+                            <div key={idx} className="mb-3 border-b border-gray-700 pb-2 last:border-b-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`w-2 h-2 rounded-full ${result.status === "success" ? "bg-green-400" :
+                                  result.status === "failed" ? "bg-red-400" : "bg-yellow-400"
+                                  }`} />
+                                <span className="text-cyan-400">{result.command}</span>
+                                <span className="ml-auto text-xs text-gray-400 animate-pulse">
+                                  {result.status === "success" ? "Success" :
+                                    result.status === "failed" ? "Failed" : "Running"}
+                                </span>
                               </div>
-
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => addSuggestedCommand(suggestion.command)}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add to Methodology
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => explainSelectedCommand(suggestion.command)}
-                                  disabled={explainingCommand === suggestion.command}
-                                >
-                                  {explainingCommand === suggestion.command ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-1" />
-                                  ) : (
-                                    <HelpCircle className="h-3 w-3 mr-1" />
-                                  )}
-                                  Explain
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => runCommand(suggestion.command)}
-                                  className="ml-auto"
-                                >
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  Run Now
-                                </Button>
+                              <div className="text-gray-300 ml-4 text-xs whitespace-pre-wrap">
+                                {result.output}
                               </div>
-
-                              {/* Command Explanation */}
-                              {commandExplanation && explainingCommand === suggestion.command && (
-                                <div className="mt-3 p-3 bg-white border rounded-lg">
-                                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                                    <Bot className="h-4 w-4 text-blue-600" />
-                                    AI Explanation
-                                  </h4>
-
-                                  <div className="space-y-2 text-sm">
-                                    <div>
-                                      <span className="font-medium">Purpose:</span>
-                                      <p className="text-gray-700">{commandExplanation.purpose}</p>
-                                    </div>
-
-                                    <div>
-                                      <span className="font-medium">Explanation:</span>
-                                      <p className="text-gray-700">{commandExplanation.explanation}</p>
-                                    </div>
-
-                                    {commandExplanation.risks.length > 0 && (
-                                      <div>
-                                        <span className="font-medium text-red-600">Risks:</span>
-                                        <ul className="list-disc list-inside text-gray-700">
-                                          {commandExplanation.risks.map((risk, i) => (
-                                            <li key={i}>{risk}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-
-                                    {commandExplanation.best_practices.length > 0 && (
-                                      <div>
-                                        <span className="font-medium text-green-600">Best Practices:</span>
-                                        <ul className="list-disc list-inside text-gray-700">
-                                          {commandExplanation.best_practices.map((practice, i) => (
-                                            <li key={i}>{practice}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           ))
                         ) : (
-                          <div className="text-center py-4 text-gray-500">
-                            <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No suggestions available. Try generating suggestions with AI.</p>
+                          <div className="text-gray-500 text-center py-8">
+                            <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No commands executed yet</p>
+                            <p className="text-xs mt-1">Command results will appear here</p>
                           </div>
                         )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Terminal Results */}
-                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <Terminal className="h-5 w-5" />
-                        Terminal Results
-                      </CardTitle>
-                      {terminalOutput.length > 0 && (
-                        <Button size="sm" variant="outline" onClick={clearTerminalOutput}>
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto border border-cyan-500/30">
-                      {terminalOutput.length > 0 ? (
-                        terminalOutput.map((result, idx) => (
-                          <div key={idx} className="mb-3 border-b border-gray-700 pb-2 last:border-b-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`w-2 h-2 rounded-full ${result.status === "success" ? "bg-green-400" :
-                                result.status === "failed" ? "bg-red-400" : "bg-yellow-400"
-                                }`} />
-                              <span className="text-cyan-400">{result.command}</span>
-                              <span className="ml-auto text-xs text-gray-400 animate-pulse">
-                                {result.status === "success" ? "Success" :
-                                  result.status === "failed" ? "Failed" : "Running"}
-                              </span>
-                            </div>
-                            <div className="text-gray-300 ml-4 text-xs whitespace-pre-wrap">
-                              {result.output}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-gray-500 text-center py-8">
-                          <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No commands executed yet</p>
-                          <p className="text-xs mt-1">Command results will appear here</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              // Dashboard View (Project selected, no methodology)
-              <div className="text-center space-y-6">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Shield className="h-12 w-12 text-primary" />
+                    </CardContent>
+                  </Card>
                 </div>
-                <h1 className="text-4xl font-bold mb-2">Pentest Methodology Builder</h1>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  Select a methodology from the sidebar to start your penetration testing workflow for project:
-                  <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
+              ) : (
+                <div className="text-center space-y-6">
+                  <div className="flex items-center justify-center gap-3 mb-6">
+                    <Shield className="h-12 w-12 text-primary" />
+                  </div>
+                  <h1 className="text-4xl font-bold mb-2">Pentest Methodology Builder</h1>
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                    Select a methodology from the sidebar to start your penetration testing workflow for project:
+                    <span className="font-semibold text-green-600 ml-2">{currentProject.name}</span>
+                    or find one in the
+                    <Link href="/share" className="text-gray-700 hover:text-blue-600">
+                      Community
+                    </Link>
+                  </p>
+                  <ReportsPage />
 
-
-                  or find one in the
-                  <Link href="/share" className="text-gray-700 hover:text-blue-600">
-                    Community
-                  </Link>
-                </p>
-                <ReportsPage />
-
-                {/* Add New Methodology Card */}
-                <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2 text-gray-800">
-                      <Plus className="h-4 w-4" />Add New Methodology
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Input
-                      placeholder="Methodology name..."
-                      value={newMethodologyName}
-                      onChange={(e) => setNewMethodologyName(e.target.value)}
-                      className="text-sm bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
-                    />
-                    <Textarea
-                      placeholder="Description..."
-                      value={newMethodologyDescription}
-                      onChange={(e) => setNewMethodologyDescription(e.target.value)}
-                      className="text-sm min-h-[60px] resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
-                    />
-                    <Textarea
-                      placeholder="Commands (one per line)"
-                      value={newMethodologyCommands}
-                      onChange={(e) => setNewMethodologyCommands(e.target.value)}
-                      className="text-sm min-h-[80px] font-mono resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
-                    />
-                    <Button
-                      onClick={addMethodology}
-                      disabled={!newMethodologyName.trim()}
-                      size="sm"
-                      className="w-full bg-gray-600 hover:bg-gray-700 text-white"
-                    >
-                      <Plus className="h-3 w-3 mr-2" />
-                      Add Methodology
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
+                  <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2 text-gray-800">
+                        <Plus className="h-4 w-4" />Add New Methodology
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Input
+                        placeholder="Methodology name..."
+                        value={newMethodologyName}
+                        onChange={(e) => setNewMethodologyName(e.target.value)}
+                        className="text-sm bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                      />
+                      <Textarea
+                        placeholder="Description..."
+                        value={newMethodologyDescription}
+                        onChange={(e) => setNewMethodologyDescription(e.target.value)}
+                        className="text-sm min-h-[60px] resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                      />
+                      <Textarea
+                        placeholder="Commands (one per line)"
+                        value={newMethodologyCommands}
+                        onChange={(e) => setNewMethodologyCommands(e.target.value)}
+                        className="text-sm min-h-[80px] font-mono resize-none bg-gray-50 focus:ring-2 focus:ring-cyan-500 text-gray-800 placeholder-gray-500"
+                      />
+                      <Button
+                        onClick={addMethodology}
+                        disabled={!newMethodologyName.trim()}
+                        size="sm"
+                        className="w-full bg-gray-600 hover:bg-gray-700 text-white"
+                      >
+                        <Plus className="h-3 w-3 mr-2" />
+                        Add Methodology
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -26,7 +26,8 @@ import {
   Target,
   Sparkles,
   ChevronDown,
-  MessageCircle
+  MessageCircle,
+  Activity
 } from "lucide-react"
 import Link from "next/link"
 import { generateAIAnalysis as generateAIAnalysisAPI } from '@/lib/ai-analysis';
@@ -205,26 +206,7 @@ export default function ReportsPage() {
       evidence.filename.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesProject && matchesSearch
   })
-  // async function generateAIAnalysis() {
-  //   try {
-  //     setIsAnalyzing(true);
 
-  //     const analysisData = await generateAIAnalysisAPI({  // Use the renamed import
-  //       commands: filteredCommands,
-  //       evidence: filteredEvidence,
-  //       projects: projects,
-  //       methodologies: methodologies,
-  //       customPrompt: customPrompt
-  //     });
-
-  //     setAiAnalysis(analysisData);
-  //   } catch (error) {
-  //     console.error("AI analysis failed", error);
-  //     alert("AI analysis failed. Please check your AI service configuration.");
-  //   } finally {
-  //     setIsAnalyzing(false);
-  //   }
-  // }
 
   async function handleGenerateAIAnalysis() {
     try {
@@ -532,331 +514,772 @@ Error: ${error.message}`;
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <div className="p-2 bg-white rounded-lg shadow-sm border">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-            </Link>
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-6 bg-white rounded-xl shadow-sm border">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <FileText className="h-8 w-8 text-blue-600" />
+            </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Security Assessment Reports</h1>
               <p className="text-gray-600 mt-1">Comprehensive analysis of penetration testing activities and findings</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <div className="flex flex-wrap gap-2">
-              {/* AI Provider Selection */}
-              <div className="flex items-center gap-2 bg-white rounded-lg border p-2">
-                <label className="text-sm font-medium text-gray-700">AI Provider:</label>
-                <select
-                  value={aiProvider}
-                  onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
-                  className="text-sm border-none focus:ring-0"
-                >
-                  <option value="local">Local (Ollama)</option>
-                  <option value="online">Online (Gemini/GPT)</option>
-                </select>
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export PDF
+            </Button>
+            <Button
+              onClick={exportToJSON}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export JSON
+            </Button>
+          </div>
+        </div>
 
-                {aiProvider === "online" && (
-                  <select
-                    value={onlineProvider}
-                    onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
-                    className="text-sm border-none focus:ring-0"
-                  >
-                    <option value="gemini">Google Gemini</option>
-                    <option value="gpt">OpenAI GPT</option>
-                  </select>
-                )}
+        {/* Quick Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{filteredCommands.length}</p>
+                <p className="text-sm text-gray-600">Commands</p>
               </div>
-              <Button
-                onClick={handleGenerateAIAnalysis}  // Make sure it's this function
-                disabled={isAnalyzing}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {aiProvider === "local" ? "Local AI Analysis" : `Online AI Analysis (${onlineProvider.toUpperCase()})`}
-                  </>
-                )}
-              </Button>
+              <Terminal className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
 
-              <Button onClick={exportToPDF} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export PDF
-              </Button>
-              <Button onClick={exportToJSON} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export JSON
-              </Button>
+          <div className="bg-white p-4 rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{filteredEvidence.length}</p>
+                <p className="text-sm text-gray-600">Evidence Files</p>
+              </div>
+              <FileText className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
+                <p className="text-sm text-gray-600">Projects</p>
+              </div>
+              <FolderOpen className="h-8 w-8 text-purple-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{methodologies.length}</p>
+                <p className="text-sm text-gray-600">Methodologies</p>
+              </div>
+              <Shield className="h-8 w-8 text-orange-600" />
             </div>
           </div>
         </div>
-        {/* AI Analysis Customization */}
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <h4 className="font-semibold mb-3">AI Analysis Customization</h4>
-          <Textarea
-            placeholder="Add custom instructions for AI analysis (e.g., focus on specific vulnerabilities, compliance requirements, etc.)"
-            value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            className="mb-3 bg-white"
-            rows={3}
-          />
-          <Button
-            onClick={handleGenerateAIAnalysis}  // Make sure it's this function
-            disabled={isAnalyzing}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-          >
-            {isAnalyzing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                {aiProvider === "local" ? "Local AI Analysis" : `Online AI Analysis (${onlineProvider.toUpperCase()})`}
-              </>
-            )}
-          </Button>
-        </div>
 
+        {/* Main Content Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* AI Analysis Section */}
-        {aiAnalysis && (
-          <Card className="mb-6 border-l-4 border-l-blue-500 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Brain className="h-5 w-5 text-blue-600" />
-                  AI-Powered Security Analysis
+          {/* Left Sidebar - Filters & AI Tools */}
+          <div className="lg:col-span-1 space-y-6">
+
+            {/* Project Filter */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filters
                 </CardTitle>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  AI Generated
-                </Badge>
-              </div>
-              <CardDescription>
-                Automated analysis of security findings and recommendations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Summary */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Executive Summary</h4>
-                <p className="text-gray-700 bg-blue-50 rounded-lg p-4 border">
-                  {aiAnalysis.summary || "No summary available."}
-                </p>
-              </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Project</label>
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => setSelectedProject(e.target.value === "all" ? "all" : Number(e.target.value))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Projects</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Statistics - With Safe Defaults */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
-                  <div className="text-2xl font-bold text-gray-900">
-                    {aiAnalysis.statistics?.totalCommands || 0}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search commands, evidence..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
-                  <div className="text-xs text-gray-600">Total Commands</div>
                 </div>
-                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
-                  <div className="text-2xl font-bold text-green-600">
-                    {aiAnalysis.statistics?.successfulCommands || 0}
-                  </div>
-                  <div className="text-xs text-gray-600">Successful</div>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
-                  <div className="text-2xl font-bold text-red-600">
-                    {aiAnalysis.statistics?.failedCommands || 0}
-                  </div>
-                  <div className="text-xs text-gray-600">Failed</div>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {aiAnalysis.statistics?.evidenceCount || 0}
-                  </div>
-                  <div className="text-xs text-gray-600">Evidence Files</div>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border shadow-sm">
-                  <div className="text-2xl font-bold text-red-600">
-                    {aiAnalysis.statistics?.criticalFindings || 0}
-                  </div>
-                  <div className="text-xs text-gray-600">Critical Findings</div>
-                </div>
-              </div>
 
-              {/* Findings */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">
-                  Security Findings ({aiAnalysis.findings?.length || 0})
-                </h4>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("")
+                    setSelectedProject("all")
+                  }}
+                  className="w-full"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* AI Analysis Tools */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  AI Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  {aiAnalysis.findings && aiAnalysis.findings.length > 0 ? (
-                    aiAnalysis.findings.map((finding, index) => (
-                      <div key={index} className="border rounded-lg p-3 bg-white shadow-sm">
-                        <div className="flex items-start justify-between mb-2">
-                          <h5 className="font-medium text-gray-900">
-                            {finding.title || "Untitled Finding"}
-                          </h5>
-                          <Badge className={getSeverityColor(finding.severity || "medium")}>
-                            {(finding.severity || "medium").toUpperCase()}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-700 text-sm mb-3">
-                          {finding.description || "No description provided."}
-                        </p>
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-900">Recommendation:</span>
-                          <p className="text-gray-700 mt-1">
-                            {finding.recommendation || "No recommendation provided."}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      <p>No security findings to display.</p>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">AI Provider</label>
+                    <select
+                      value={aiProvider}
+                      onChange={(e) => setAiProvider(e.target.value as "local" | "online")}
+                      className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="local">Local (Ollama)</option>
+                      <option value="online">Online AI</option>
+                    </select>
+                  </div>
+
+                  {aiProvider === "online" && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Provider</label>
+                      <select
+                        value={onlineProvider}
+                        onChange={(e) => setOnlineProvider(e.target.value as "gemini" | "gpt")}
+                        className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="gemini">Google Gemini</option>
+                        <option value="gpt">OpenAI GPT</option>
+                      </select>
                     </div>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Filters and Search */}
-        <Card className="mb-6 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-end">
-              <div className="flex-1 w-full">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Search Content</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search commands, outputs, evidence descriptions..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white"
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Custom Instructions</label>
+                  <Textarea
+                    placeholder="Focus on specific vulnerabilities, compliance requirements..."
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    className="min-h-[80px] text-sm"
                   />
                 </div>
-              </div>
 
-              <div className="w-full lg:w-64">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Project</label>
-                <select
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value === "all" ? "all" : Number(e.target.value))}
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <Button
+                  onClick={handleGenerateAIAnalysis}
+                  disabled={isAnalyzing}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                 >
-                  <option value="all">All Projects</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {isAnalyzing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate AI Analysis
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
 
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("")
-                  setSelectedProject("all")
-                }}
-                className="whitespace-nowrap"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Clear Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Quick Actions */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Executive Summary
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Risk Assessment Report
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All Data
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:max-w-md">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="commands">Commands</TabsTrigger>
-            <TabsTrigger value="evidence">Evidence</TabsTrigger>
-            <TabsTrigger value="export">Export</TabsTrigger>
-          </TabsList>
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-6">
+            {/* AI Analysis Results */}
+            {aiAnalysis && (
+              <Card className="border-l-4 border-l-blue-500 shadow-lg">
+                <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{filteredCommands.length}</p>
-                      <p className="text-sm text-gray-600">Commands Executed</p>
+                    <CardTitle className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-blue-600" />
+                      AI Security Analysis
+                    </CardTitle>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI Generated
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Summary */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Executive Summary</h4>
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <p className="text-gray-700 leading-relaxed">
+                        {aiAnalysis.summary || "No summary available."}
+                      </p>
                     </div>
-                    <Terminal className="h-8 w-8 text-blue-600" />
+                  </div>
+
+                  {/* Statistics */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { label: "Total Commands", value: aiAnalysis.statistics?.totalCommands || 0, color: "gray" },
+                      { label: "Successful", value: aiAnalysis.statistics?.successfulCommands || 0, color: "green" },
+                      { label: "Failed", value: aiAnalysis.statistics?.failedCommands || 0, color: "red" },
+                      { label: "Evidence Files", value: aiAnalysis.statistics?.evidenceCount || 0, color: "blue" },
+                      { label: "Critical Findings", value: aiAnalysis.statistics?.criticalFindings || 0, color: "red" }
+                    ].map((stat, index) => (
+                      <div key={index} className="text-center p-3 bg-white rounded-lg border shadow-sm">
+                        <div className={`text-2xl font-bold text-${stat.color}-600`}>
+                          {stat.value}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Findings */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Security Findings ({aiAnalysis.findings?.length || 0})
+                    </h4>
+                    <div className="space-y-3">
+                      {aiAnalysis.findings && aiAnalysis.findings.length > 0 ? (
+                        aiAnalysis.findings.map((finding, index) => (
+                          <div key={index} className="border rounded-lg p-4 bg-white shadow-sm">
+                            <div className="flex items-start justify-between mb-3">
+                              <h5 className="font-medium text-gray-900 flex-1">
+                                {finding.title || "Untitled Finding"}
+                              </h5>
+                              <Badge className={getSeverityColor(finding.severity || "medium")}>
+                                {(finding.severity || "medium").toUpperCase()}
+                              </Badge>
+                            </div>
+                            <p className="text-gray-700 text-sm mb-3 leading-relaxed">
+                              {finding.description || "No description provided."}
+                            </p>
+                            <div className="text-sm">
+                              <span className="font-medium text-gray-900">Recommendation:</span>
+                              <p className="text-gray-700 mt-1 leading-relaxed">
+                                {finding.recommendation || "No recommendation provided."}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <p>No security findings identified.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+            )}
+            {/* Main Content Tabs */}
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4 lg:max-w-md">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="commands">Commands</TabsTrigger>
+                <TabsTrigger value="evidence">Evidence</TabsTrigger>
+                <TabsTrigger value="export">Export</TabsTrigger>
+              </TabsList>
 
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{filteredEvidence.length}</p>
-                      <p className="text-sm text-gray-600">Evidence Files</p>
-                    </div>
-                    <FileText className="h-8 w-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
+              <TabsContent value="overview" className="space-y-6">
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">{filteredCommands.length}</p>
+                          <p className="text-sm text-gray-600">Commands Executed</p>
+                        </div>
+                        <Terminal className="h-8 w-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
-                      <p className="text-sm text-gray-600">Active Projects</p>
-                    </div>
-                    <Target className="h-8 w-8 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">{filteredEvidence.length}</p>
+                          <p className="text-sm text-gray-600">Evidence Files</p>
+                        </div>
+                        <FileText className="h-8 w-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{methodologies.length}</p>
-                      <p className="text-sm text-gray-600">Methodologies</p>
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
+                          <p className="text-sm text-gray-600">Active Projects</p>
+                        </div>
+                        <Target className="h-8 w-8 text-purple-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">{methodologies.length}</p>
+                          <p className="text-sm text-gray-600">Methodologies</p>
+                        </div>
+                        <Shield className="h-8 w-8 text-orange-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Zap className="h-5 w-5 text-orange-600" />
+                        Recent Commands
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {filteredCommands.slice(0, 5).map((cmd, index) => (
+                        <div key={index} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                          <div className={`w-2 h-2 rounded-full ${cmd.status === "success" ? "bg-green-500" :
+                            cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"
+                            }`} />
+                          <code className="text-xs font-mono flex-1 truncate">{cmd.command}</code>
+                          <Badge variant="outline" className="text-xs">
+                            {cmd.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        Recent Evidence
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {filteredEvidence.slice(0, 5).map((evidence) => (
+                        <div key={evidence.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                          <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{evidence.filename}</p>
+                            <p className="text-xs text-gray-500 truncate">{evidence.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+              <TabsContent value="commands">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Terminal className="h-5 w-5" />
+                      Command Execution History ({filteredCommands.length})
+                      <div className="flex gap-1 ml-auto">
+                        <Badge variant="outline" className="bg-green-50 text-green-700">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          {filteredCommands.filter(cmd => cmd.status === "success").length}
+                        </Badge>
+                        <Badge variant="outline" className="bg-red-50 text-red-700">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          {filteredCommands.filter(cmd => cmd.status === "failed").length}
+                        </Badge>
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {filteredCommands.filter(cmd => cmd.status === "running").length}
+                        </Badge>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {filteredCommands.length > 0 ? (
+                      <div className="space-y-3">
+                        {filteredCommands.map((cmd, index) => (
+                          <div
+                            key={index}
+                            className="border rounded-lg bg-white hover:shadow-md transition-all duration-200 overflow-hidden"
+                          >
+                            {/* Command Header */}
+                            <div className={`
+                flex items-center justify-between p-3 border-b cursor-pointer
+                ${cmd.status === "success" ? "bg-green-50 border-green-200" :
+                                cmd.status === "failed" ? "bg-red-50 border-red-200" :
+                                  "bg-yellow-50 border-yellow-200"}
+              `}
+                              onClick={() => {
+                                // Toggle output visibility
+                                const outputs = document.querySelectorAll('.command-output');
+                                const output = outputs[index] as HTMLElement;
+                                if (output) {
+                                  output.style.display = output.style.display === 'none' ? 'block' : 'none';
+                                }
+                              }}>
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className={`
+                    w-3 h-3 rounded-full flex-shrink-0
+                    ${cmd.status === "success" ? "bg-green-500" :
+                                    cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"}
+                  `} />
+
+                                <div className="flex-1 min-w-0">
+                                  <code className="text-sm font-mono text-gray-800 bg-white/80 px-2 py-1 rounded border truncate block">
+                                    {cmd.command}
+                                  </code>
+
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
+                                    {cmd.timestamp && (
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {new Date(cmd.timestamp).toLocaleString()}
+                                      </span>
+                                    )}
+                                    {cmd.project_id && (
+                                      <span className="flex items-center gap-1">
+                                        <FolderOpen className="h-3 w-3" />
+                                        {getProjectName(cmd.project_id)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                <Badge className={`
+                    ${cmd.status === "success" ? "bg-green-100 text-green-800 border-green-200" :
+                                    cmd.status === "failed" ? "bg-red-100 text-red-800 border-red-200" :
+                                      "bg-yellow-100 text-yellow-800 border-yellow-200"}
+                  `}>
+                                  {cmd.status}
+                                </Badge>
+                                <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
+                              </div>
+                            </div>
+
+                            {/* Command Output - Collapsible */}
+                            <div
+                              className="command-output p-4 bg-gray-900 text-green-400 font-mono text-sm"
+                              style={{ display: 'none' }}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-gray-400 text-xs">Output:</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(cmd.output);
+                                  }}
+                                  className="h-6 text-xs text-gray-400 hover:text-white"
+                                >
+                                  Copy
+                                </Button>
+                              </div>
+                              <pre className="whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto">
+                                {cmd.output || <span className="text-gray-500">No output</span>}
+                              </pre>
+
+                              {/* Output Statistics */}
+                              {cmd.output && (
+                                <div className="mt-3 pt-2 border-t border-gray-700">
+                                  <div className="flex gap-4 text-xs text-gray-400">
+                                    <span>Lines: {cmd.output.split('\n').length}</span>
+                                    <span>Chars: {cmd.output.length}</span>
+                                    {cmd.output.length > 1000 && (
+                                      <span className="text-yellow-400">Large output</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-gray-500">
+                        <Terminal className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg font-medium mb-2">No command history found</p>
+                        <p className="text-sm">Execute commands in the methodologies page to see them here</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="evidence">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Collected Evidence ({filteredEvidence.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {filteredEvidence.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {filteredEvidence.map((evidence) => (
+                          <Card key={evidence.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                            <CardContent className="p-0">
+                              {/* Evidence Preview Section */}
+                              <div className="border-b">
+                                {isImageFile(evidence.filename) ? (
+                                  <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={`${apiBase}/api/evidence-file/${evidence.id}`}
+                                      alt={evidence.description}
+                                      className="w-full h-full object-contain max-h-64"
+                                      onError={(e) => {
+                                        // If image fails to load, show file icon
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                    <div className="hidden absolute inset-0 flex-col items-center justify-center bg-gray-50 p-4">
+                                      <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                                      <span className="text-sm text-gray-500 text-center break-all">
+                                        {evidence.filename}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : isTextFile(evidence.filename) ? (
+                                  <div className="bg-gray-900 text-green-400 p-4 max-h-48 overflow-y-auto">
+                                    <TextFilePreview
+                                      filePath={evidence.saved_path}
+                                      filename={evidence.filename}
+                                      apiBase={apiBase}
+                                      evidenceId={evidence.id}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="aspect-video bg-gray-50 flex flex-col items-center justify-center p-4">
+                                    <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                                    <span className="text-sm text-gray-600 text-center break-all">
+                                      {evidence.filename}
+                                    </span>
+                                    <Badge variant="outline" className="mt-2 bg-gray-200">
+                                      {evidence.type || getFileType(evidence.filename)}
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Evidence Details */}
+                              <div className="p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                    <span className="font-medium text-sm truncate">{evidence.filename}</span>
+                                  </div>
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex-shrink-0">
+                                    {evidence.type || getFileType(evidence.filename)}
+                                  </Badge>
+                                </div>
+
+                                <div className="text-sm text-gray-600 mb-3 space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {formatTimestamp(evidence.uploaded_at)}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <FolderOpen className="h-3 w-3" />
+                                    {getProjectName(evidence.project_id)}
+                                  </div>
+                                  {evidence.methodology_id && (
+                                    <div className="flex items-center gap-1">
+                                      <Shield className="h-3 w-3" />
+                                      {getMethodologyName(evidence.methodology_id)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {evidence.description && (
+                                  <p className="text-sm text-gray-700 mb-3 line-clamp-2">{evidence.description}</p>
+                                )}
+
+                                {evidence.notes && (
+                                  <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+                                    <p className="text-xs font-medium text-amber-800 mb-1">Investigator Notes:</p>
+                                    <p className="text-xs text-amber-700 line-clamp-2">{evidence.notes}</p>
+                                  </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2 mt-4">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => downloadEvidence(evidence)}
+                                    className="flex-1"
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Download
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(evidence.saved_path)}
+                                    className="flex-1"
+                                  >
+                                    Copy Path
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-gray-500">
+                        <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg font-medium mb-2">No evidence collected</p>
+                        <p className="text-sm">Upload evidence through manual steps to see them here</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="export">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Data Export & Integration</CardTitle>
+                    <CardDescription>
+                      Export your penetration testing data for reporting or further analysis
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button
+                        onClick={exportToJSON}
+                        className="h-auto py-4 flex flex-col items-center gap-2"
+                        variant="outline"
+                      >
+                        <FileText className="h-6 w-6" />
+                        <span>Export Complete Report</span>
+                        <span className="text-xs text-gray-500">JSON Format</span>
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          const data = JSON.stringify(commandHistory, null, 2)
+                          const blob = new Blob([data], { type: 'application/json' })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `command-history-${Date.now()}.json`
+                          a.click()
+                        }}
+                        className="h-auto py-4 flex flex-col items-center gap-2"
+                        variant="outline"
+                      >
+                        <Terminal className="h-6 w-6" />
+                        <span>Export Commands Only</span>
+                        <span className="text-xs text-gray-500">JSON Format</span>
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          const data = JSON.stringify(manualEvidence, null, 2)
+                          const blob = new Blob([data], { type: 'application/json' })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `evidence-${Date.now()}.json`
+                          a.click()
+                        }}
+                        className="h-auto py-4 flex flex-col items-center gap-2"
+                        variant="outline"
+                      >
+                        <FileText className="h-6 w-6" />
+                        <span>Export Evidence Only</span>
+                        <span className="text-xs text-gray-500">JSON Format</span>
+                      </Button>
                     </div>
-                    <Shield className="h-8 w-8 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+
+
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+
 
             {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Zap className="h-5 w-5 text-orange-600" />
+                    <Activity className="h-5 w-5" />
                     Recent Commands
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {filteredCommands.slice(0, 5).map((cmd, index) => (
-                    <div key={index} className="flex items-center gap-3 py-2 border-b last:border-b-0">
-                      <div className={`w-2 h-2 rounded-full ${cmd.status === "success" ? "bg-green-500" :
-                        cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"
-                        }`} />
-                      <code className="text-xs font-mono flex-1 truncate">{cmd.command}</code>
-                      <Badge variant="outline" className="text-xs">
+                    <div key={index} className="flex items-center gap-3 py-3 border-b last:border-b-0">
+                      <div className={`w-2 h-2 rounded-full ${cmd.status === "success" ? "bg-green-500" : "bg-red-500"}`} />
+                      <code className="text-sm font-mono flex-1 truncate">{cmd.command}</code>
+                      <Badge variant={cmd.status === "success" ? "default" : "destructive"} className="text-xs">
                         {cmd.status}
                       </Badge>
                     </div>
@@ -867,14 +1290,14 @@ Error: ${error.message}`;
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                    <FileText className="h-5 w-5" />
                     Recent Evidence
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {filteredEvidence.slice(0, 5).map((evidence) => (
-                    <div key={evidence.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
-                      <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <div key={evidence.id} className="flex items-center gap-3 py-3 border-b last:border-b-0">
+                      <FileText className="h-4 w-4 text-blue-600" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{evidence.filename}</p>
                         <p className="text-xs text-gray-500 truncate">{evidence.description}</p>
@@ -884,446 +1307,118 @@ Error: ${error.message}`;
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-          <TabsContent value="commands">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Terminal className="h-5 w-5" />
-                  Command Execution History ({filteredCommands.length})
-                  <div className="flex gap-1 ml-auto">
-                    <Badge variant="outline" className="bg-green-50 text-green-700">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      {filteredCommands.filter(cmd => cmd.status === "success").length}
-                    </Badge>
-                    <Badge variant="outline" className="bg-red-50 text-red-700">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      {filteredCommands.filter(cmd => cmd.status === "failed").length}
-                    </Badge>
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {filteredCommands.filter(cmd => cmd.status === "running").length}
-                    </Badge>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredCommands.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredCommands.map((cmd, index) => (
-                      <div
-                        key={index}
-                        className="border rounded-lg bg-white hover:shadow-md transition-all duration-200 overflow-hidden"
-                      >
-                        {/* Command Header */}
-                        <div className={`
-                flex items-center justify-between p-3 border-b cursor-pointer
-                ${cmd.status === "success" ? "bg-green-50 border-green-200" :
-                            cmd.status === "failed" ? "bg-red-50 border-red-200" :
-                              "bg-yellow-50 border-yellow-200"}
-              `}
-                          onClick={() => {
-                            // Toggle output visibility
-                            const outputs = document.querySelectorAll('.command-output');
-                            const output = outputs[index] as HTMLElement;
-                            if (output) {
-                              output.style.display = output.style.display === 'none' ? 'block' : 'none';
-                            }
-                          }}>
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={`
-                    w-3 h-3 rounded-full flex-shrink-0
-                    ${cmd.status === "success" ? "bg-green-500" :
-                                cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"}
-                  `} />
 
-                            <div className="flex-1 min-w-0">
-                              <code className="text-sm font-mono text-gray-800 bg-white/80 px-2 py-1 rounded border truncate block">
-                                {cmd.command}
-                              </code>
-
-                              <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
-                                {cmd.timestamp && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {new Date(cmd.timestamp).toLocaleString()}
-                                  </span>
-                                )}
-                                {cmd.project_id && (
-                                  <span className="flex items-center gap-1">
-                                    <FolderOpen className="h-3 w-3" />
-                                    {getProjectName(cmd.project_id)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                            <Badge className={`
-                    ${cmd.status === "success" ? "bg-green-100 text-green-800 border-green-200" :
-                                cmd.status === "failed" ? "bg-red-100 text-red-800 border-red-200" :
-                                  "bg-yellow-100 text-yellow-800 border-yellow-200"}
-                  `}>
-                              {cmd.status}
-                            </Badge>
-                            <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
-                          </div>
-                        </div>
-
-                        {/* Command Output - Collapsible */}
-                        <div
-                          className="command-output p-4 bg-gray-900 text-green-400 font-mono text-sm"
-                          style={{ display: 'none' }}
+            {/* AI Chat Section */}
+            {aiAnalysis && (
+              <Card className="border-l-4 border-l-green-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-green-600" />
+                    Ask AI Follow-up Questions
+                  </CardTitle>
+                  <CardDescription>
+                    Get more insights about the security assessment. Ask about specific findings, recommendations, or details.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Example questions */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Example questions you can ask:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {exampleQuestions.map((question, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setChatQuestion(question)}
+                          className="text-xs h-auto py-2 px-3 text-left"
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-gray-400 text-xs">Output:</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(cmd.output);
-                              }}
-                              className="h-6 text-xs text-gray-400 hover:text-white"
-                            >
-                              Copy
-                            </Button>
-                          </div>
-                          <pre className="whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto">
-                            {cmd.output || <span className="text-gray-500">No output</span>}
-                          </pre>
-
-                          {/* Output Statistics */}
-                          {cmd.output && (
-                            <div className="mt-3 pt-2 border-t border-gray-700">
-                              <div className="flex gap-4 text-xs text-gray-400">
-                                <span>Lines: {cmd.output.split('\n').length}</span>
-                                <span>Chars: {cmd.output.length}</span>
-                                {cmd.output.length > 1000 && (
-                                  <span className="text-yellow-400">Large output</span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                          {question}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <Terminal className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No command history found</p>
-                    <p className="text-sm">Execute commands in the methodologies page to see them here</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="evidence">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Collected Evidence ({filteredEvidence.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredEvidence.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredEvidence.map((evidence) => (
-                      <Card key={evidence.id} className="hover:shadow-lg transition-shadow overflow-hidden">
-                        <CardContent className="p-0">
-                          {/* Evidence Preview Section */}
-                          <div className="border-b">
-                            {isImageFile(evidence.filename) ? (
-                              <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
-                                <img
-                                  src={`${apiBase}/api/evidence-file/${evidence.id}`}
-                                  alt={evidence.description}
-                                  className="w-full h-full object-contain max-h-64"
-                                  onError={(e) => {
-                                    // If image fails to load, show file icon
-                                    e.currentTarget.style.display = 'none';
-                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                  }}
-                                />
-                                <div className="hidden absolute inset-0 flex-col items-center justify-center bg-gray-50 p-4">
-                                  <FileText className="h-12 w-12 text-gray-400 mb-2" />
-                                  <span className="text-sm text-gray-500 text-center break-all">
-                                    {evidence.filename}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : isTextFile(evidence.filename) ? (
-                              <div className="bg-gray-900 text-green-400 p-4 max-h-48 overflow-y-auto">
-                                <TextFilePreview
-                                  filePath={evidence.saved_path}
-                                  filename={evidence.filename}
-                                  apiBase={apiBase}
-                                  evidenceId={evidence.id}
-                                />
-                              </div>
-                            ) : (
-                              <div className="aspect-video bg-gray-50 flex flex-col items-center justify-center p-4">
-                                <FileText className="h-12 w-12 text-gray-400 mb-2" />
-                                <span className="text-sm text-gray-600 text-center break-all">
-                                  {evidence.filename}
-                                </span>
-                                <Badge variant="outline" className="mt-2 bg-gray-200">
-                                  {evidence.type || getFileType(evidence.filename)}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Evidence Details */}
-                          <div className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                                <span className="font-medium text-sm truncate">{evidence.filename}</span>
-                              </div>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex-shrink-0">
-                                {evidence.type || getFileType(evidence.filename)}
-                              </Badge>
-                            </div>
-
-                            <div className="text-sm text-gray-600 mb-3 space-y-1">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatTimestamp(evidence.uploaded_at)}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <FolderOpen className="h-3 w-3" />
-                                {getProjectName(evidence.project_id)}
-                              </div>
-                              {evidence.methodology_id && (
-                                <div className="flex items-center gap-1">
-                                  <Shield className="h-3 w-3" />
-                                  {getMethodologyName(evidence.methodology_id)}
-                                </div>
-                              )}
-                            </div>
-
-                            {evidence.description && (
-                              <p className="text-sm text-gray-700 mb-3 line-clamp-2">{evidence.description}</p>
-                            )}
-
-                            {evidence.notes && (
-                              <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-                                <p className="text-xs font-medium text-amber-800 mb-1">Investigator Notes:</p>
-                                <p className="text-xs text-amber-700 line-clamp-2">{evidence.notes}</p>
-                              </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 mt-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadEvidence(evidence)}
-                                className="flex-1"
-                              >
-                                <Download className="h-3 w-3 mr-1" />
-                                Download
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => copyToClipboard(evidence.saved_path)}
-                                className="flex-1"
-                              >
-                                Copy Path
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No evidence collected</p>
-                    <p className="text-sm">Upload evidence through manual steps to see them here</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="export">
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Export & Integration</CardTitle>
-                <CardDescription>
-                  Export your penetration testing data for reporting or further analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button
-                    onClick={exportToJSON}
-                    className="h-auto py-4 flex flex-col items-center gap-2"
-                    variant="outline"
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>Export Complete Report</span>
-                    <span className="text-xs text-gray-500">JSON Format</span>
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      const data = JSON.stringify(commandHistory, null, 2)
-                      const blob = new Blob([data], { type: 'application/json' })
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `command-history-${Date.now()}.json`
-                      a.click()
-                    }}
-                    className="h-auto py-4 flex flex-col items-center gap-2"
-                    variant="outline"
-                  >
-                    <Terminal className="h-6 w-6" />
-                    <span>Export Commands Only</span>
-                    <span className="text-xs text-gray-500">JSON Format</span>
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      const data = JSON.stringify(manualEvidence, null, 2)
-                      const blob = new Blob([data], { type: 'application/json' })
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `evidence-${Date.now()}.json`
-                      a.click()
-                    }}
-                    className="h-auto py-4 flex flex-col items-center gap-2"
-                    variant="outline"
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>Export Evidence Only</span>
-                    <span className="text-xs text-gray-500">JSON Format</span>
-                  </Button>
-                </div>
-
-
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-        {aiAnalysis && (
-          <Card className="mb-6 border-l-4 border-l-green-500 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-green-600" />
-                Ask AI Follow-up Questions
-              </CardTitle>
-              <CardDescription>
-                Get more insights about the security assessment. Ask about specific findings, recommendations, or details.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Example questions */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Example questions you can ask:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {exampleQuestions.map((question, index) => (
+                  {/* Chat input */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ask about specific vulnerabilities, recommendations, or details..."
+                      value={chatQuestion}
+                      onChange={(e) => setChatQuestion(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAIChat()}
+                      disabled={isChatLoading}
+                      className="flex-1"
+                    />
                     <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setChatQuestion(question)}
-                      className="text-xs h-auto py-2 px-3 text-left"
+                      onClick={handleAIChat}
+                      disabled={isChatLoading || !chatQuestion.trim()}
+                      className="whitespace-nowrap"
                     >
-                      {question}
+                      {isChatLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                          Asking...
+                        </>
+                      ) : (
+                        "Ask AI"
+                      )}
                     </Button>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Chat input */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ask about specific vulnerabilities, recommendations, or details..."
-                  value={chatQuestion}
-                  onChange={(e) => setChatQuestion(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAIChat()}
-                  disabled={isChatLoading}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleAIChat}
-                  disabled={isChatLoading || !chatQuestion.trim()}
-                  className="whitespace-nowrap"
-                >
-                  {isChatLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                      Asking...
-                    </>
-                  ) : (
-                    "Ask AI"
+                  {/* Chat answer */}
+                  {chatAnswer && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                        <h4 className="font-semibold text-green-800">AI Response:</h4>
+                      </div>
+                      <div className="prose prose-green max-w-none text-green-700">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {chatAnswer}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </div>
 
-              {/* Chat answer */}
-              {chatAnswer && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="h-4 w-4 text-green-600" />
-                    <h4 className="font-semibold text-green-800">AI Response:</h4>
-                  </div>
-                  <div className="prose prose-green max-w-none text-green-700">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {chatAnswer}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
-
-              {conversationHistory.length > 0 && (
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-gray-700">Conversation History:</h4>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setConversationHistory([])}
-                      className="text-xs"
-                    >
-                      Clear History
-                    </Button>
-                  </div>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {conversationHistory.map((conv, index) => (
-                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
-                        <div className="flex items-start gap-2 mb-2">
-                          <span className="font-medium text-blue-600 text-sm">Q:</span>
-                          <p className="text-sm flex-1">{conv.question}</p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="font-medium text-green-600 text-sm">A:</span>
-                          <p className="text-sm flex-1">{conv.answer}</p>
-                        </div>
-                        {conv.timestamp && (
-                          <div className="text-xs text-gray-500 mt-2 text-right">
-                            {new Date(conv.timestamp).toLocaleTimeString()}
-                          </div>
-                        )}
+                  {conversationHistory.length > 0 && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium text-gray-700">Conversation History:</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConversationHistory([])}
+                          className="text-xs"
+                        >
+                          Clear History
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {conversationHistory.map((conv, index) => (
+                          <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex items-start gap-2 mb-2">
+                              <span className="font-medium text-blue-600 text-sm">Q:</span>
+                              <p className="text-sm flex-1">{conv.question}</p>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-green-600 text-sm">A:</span>
+                              <p className="text-sm flex-1">{conv.answer}</p>
+                            </div>
+                            {conv.timestamp && (
+                              <div className="text-xs text-gray-500 mt-2 text-right">
+                                {new Date(conv.timestamp).toLocaleTimeString()}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
