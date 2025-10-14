@@ -135,6 +135,13 @@ export default function PentestMethodologies() {
 
   const [activeSection, setActiveSection] = useState<"home" | "methodologies">("home");
 
+
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importData, setImportData] = useState('');
+  const [importError, setImportError] = useState('');
+
+  const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
+
   useEffect(() => {
     loadMethodologies()
     loadProjects()
@@ -434,16 +441,42 @@ export default function PentestMethodologies() {
           status: "running"
         }])
 
-        await new Promise<void>(resolve => {
-          setManualStepModal({ open: true, step })
-          const checkCompletion = setInterval(() => {
-            const updatedStep = selectedMethodology.steps.find(s => s.id === step.id)
-            if (updatedStep?.completed || shouldStopRef.current) {
-              clearInterval(checkCompletion)
+        // await new Promise<void>(resolve => {
+        //   setManualStepModal({ open: true, step })
+        //   const checkCompletion = setInterval(() => {
+        //     const updatedStep = selectedMethodology.steps.find(s => s.id === step.id)
+        //     if (updatedStep?.completed || shouldStopRef.current) {
+        //       clearInterval(checkCompletion)
+        //       resolve()
+        //     }
+        //   }, 500)
+        // })
+
+        // Create a promise that resolves when the manual step is completed
+        const manualStepCompleted = new Promise<void>((resolve) => {
+          const checkCompletion = () => {
+            // Check if the step is completed in the current methodology state
+            const currentStep = selectedMethodology.steps.find(s => s.id === step.id)
+            if (currentStep?.completed) {
               resolve()
+            } else if (shouldStopRef.current) {
+              resolve() // Resolve even if stopped to continue the loop
+            } else {
+              // Check again after a delay
+              setTimeout(checkCompletion, 1000)
             }
-          }, 500)
+          }
+          checkCompletion()
         })
+
+        // Show the manual step modal
+        setManualStepModal({ open: true, step })
+
+        // Wait for the step to be completed or stopped
+        await manualStepCompleted
+
+        // Close the modal
+        setManualStepModal({ open: false, step: null })
 
         if (shouldStopRef.current) {
           setTerminalOutput(prev => [...prev, {
@@ -492,6 +525,7 @@ export default function PentestMethodologies() {
 
   // Manual step completion handler
   function handleManualStepComplete(stepId: string, evidencePath: string) {
+    // Update the methodologies state
     setMethodologies(prev => prev.map(methodology => {
       if (methodology.id === selectedMethodology?.id) {
         return {
@@ -506,6 +540,7 @@ export default function PentestMethodologies() {
       return methodology
     }))
 
+    // Update the selected methodology
     setSelectedMethodology(prev => prev ? {
       ...prev,
       steps: prev.steps.map(step =>
@@ -515,7 +550,8 @@ export default function PentestMethodologies() {
       )
     } : null)
 
-    setManualStepModal({ open: false, step: null })
+    // Don't close the modal here - let the runAllSteps function handle it
+    console.log(`✅ Manual step ${stepId} marked as completed`)
   }
 
   // Add step to methodology
@@ -635,7 +671,6 @@ export default function PentestMethodologies() {
 
     const data = {
       methodology: selectedMethodology,
-      project: currentProject,
       exportDate: new Date().toISOString()
     }
 
@@ -751,6 +786,166 @@ export default function PentestMethodologies() {
     }
   }
 
+  async function importFromJSON() {
+    if (!importData.trim()) {
+      setImportError('Please paste JSON data to import');
+      return;
+    }
+
+    try {
+      const parsedData = JSON.parse(importData);
+
+      // Validate the imported data structure
+      if (!parsedData.methodology || !parsedData.methodology.name) {
+        setImportError('Invalid methodology data structure');
+        return;
+      }
+
+      // Show success modal instead of alert
+      setSuccessModal({
+        isOpen: true,
+        title: 'Import Successful!',
+        message: `Methodology "${parsedData.methodology.name}" has been imported successfully and is now available in your methodologies list.`
+      });
+
+      // Reset and close
+      setImportData('');
+      setImportError('');
+      setImportModalOpen(false);
+
+      // Optionally reload methodologies to show the new imported one
+      loadMethodologies();
+
+    } catch (error) {
+      setImportError('Invalid JSON format: ' + error.message);
+    }
+  }
+  const ImportModal = ({ isOpen, onClose, onImport, data, setData, error }) => {
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-semibold text-gray-900">Import Methodology</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Paste JSON Data
+              </label>
+              <textarea
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                placeholder="Paste your exported methodology JSON here..."
+                rows={12}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Expected JSON Format:</h4>
+              <pre className="text-xs text-blue-700 overflow-x-auto">
+                {`{
+  "methodology": {
+    "name": "Methodology Name",
+    "description": "Description...",
+    "steps": [...],
+    "commands": [...]
+  },
+  "exportDate": "2024-01-01T00:00:00.000Z"
+}`}
+              </pre>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 p-6 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onImport}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Import Methodology
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add this file input import function for file uploads
+  async function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result;
+        if (typeof content === 'string') {
+          setImportData(content);
+          setImportModalOpen(true);
+          setImportError('');
+        }
+      } catch (error) {
+        setImportError('Failed to read file: ' + error.message);
+      }
+    };
+
+    reader.onerror = () => {
+      setImportError('Failed to read the file');
+    };
+
+    reader.readAsText(file);
+
+    // Reset the input
+    event.target.value = '';
+  }
+
+  const SuccessModal = ({ isOpen, onClose, title, message }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6 transform animate-scale-in">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+            <p className="text-gray-600 mb-6">{message}</p>
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-200 font-medium"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
 
 
@@ -763,9 +958,9 @@ export default function PentestMethodologies() {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-6 w-6 text-gray-800" />
-              <h2 className="text-xl font-bold text-gray-800">Pentest Toolkit</h2>
+              <h2 className="text-xl font-bold text-gray-800">PentestFlow</h2>
             </div>
-            <p className="text-sm text-gray-600">Professional penetration testing platform</p>
+            <p className="text-sm text-gray-600">Professional penetration testing orchestrator</p>
           </div>
 
 
@@ -977,11 +1172,11 @@ export default function PentestMethodologies() {
                 <div className="flex items-center justify-center gap-4">
                   <Shield className="h-12 w-12 text-primary" />
                   <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
-                    Pentest Toolkit
+                    PentestFlow
                   </h1>
                 </div>
                 <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Professional penetration testing platform with AI-powered workflows and automated methodologies
+                  Professional penetration testing orchestrator with AI-powered workflows and automated methodologies
                 </p>
               </div>
 
@@ -1244,10 +1439,32 @@ export default function PentestMethodologies() {
                       <Button onClick={exportToJSON} size="sm">
                         <Download className="h-4 w-4" />Export JSON
                       </Button>
+
+                      <Button
+                        onClick={() => setImportModalOpen(true)}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Import
+                      </Button>
+
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileImport}
+                        className="hidden"
+                        id="import-file"
+                      />
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById('import-file')?.click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Import from File
+                      </Button>
                     </div>
-                    <Link href="/share" className="text-gray-700 hover:text-blue-600">
-                      Community
-                    </Link>
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -1513,134 +1730,154 @@ export default function PentestMethodologies() {
                           </div>
                         )}
                       </div>
+                      
+                      {selectedMethodology.steps?.map((step, index) => (
+                        <div
+                          key={step.id}
+                          className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, step.id)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, step.id)}
+                        >
+                          <div className="cursor-move text-gray-400 hover:text-gray-600">
+                            <GripVertical className="h-4 w-4" />
+                          </div>
 
-                      {selectedMethodology.steps?.length > 0 ? (
-                        <div className="space-y-3">
-                          {selectedMethodology.steps.map((step, index) => (
-                            <div
-                              key={step.id}
-                              className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''
-                                }`}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, step.id)}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) => handleDrop(e, step.id)}
-                            >
-                              <div className="cursor-move text-gray-400 hover:text-gray-600">
-                                <GripVertical className="h-4 w-4" />
-                              </div>
+                          <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
 
-                              <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                {step.type}
+                              </span>
 
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-purple-100 text-purple-800'
-                                    }`}>
-                                    {step.type}
-                                  </span>
-
-                                  {editingStepId === step.id ? (
-                                    <div className="flex-1 flex gap-2">
-                                      <Input
-                                        value={editingStepContent}
-                                        onChange={(e) => setEditingStepContent(e.target.value)}
-                                        className="font-mono text-sm flex-1"
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') saveEditStep()
-                                          if (e.key === 'Escape') cancelEditStep()
-                                        }}
-                                      />
-                                      <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
-                                        <Save className="h-3 w-3" />
-                                      </Button>
-                                      <Button size="sm" variant="outline" onClick={cancelEditStep}>
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <code className="text-sm font-mono flex-1">{step.content}</code>
-                                  )}
-                                </div>
-                                {step.evidence && step.evidence.length > 0 && (
-                                  <div className="text-xs text-gray-600">
-                                    Evidence: {step.evidence.join(', ')}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => moveStep(step.id, 'up')}
-                                  disabled={index === 0}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <ArrowUp className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => moveStep(step.id, 'down')}
-                                  disabled={index === selectedMethodology.steps.length - 1}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <ArrowDown className="h-3 w-3" />
-                                </Button>
-
-                                {editingStepId !== step.id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => startEditStep(step.id, step.content)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Edit className="h-3 w-3" />
+                              {editingStepId === step.id ? (
+                                <div className="flex-1 flex gap-2">
+                                  <Input
+                                    value={editingStepContent}
+                                    onChange={(e) => setEditingStepContent(e.target.value)}
+                                    className="font-mono text-sm flex-1"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') saveEditStep()
+                                      if (e.key === 'Escape') cancelEditStep()
+                                    }}
+                                  />
+                                  <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
+                                    <Save className="h-3 w-3" />
                                   </Button>
-                                )}
-
-                                {step.type === "command" && editingStepId !== step.id && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => runCommand(step.content)}
-                                      className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
-                                    >
-                                      Run
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => explainSelectedCommand(step.content)}
-                                      disabled={explainingCommand === step.content}
-                                      className="flex-shrink-0 h-8"
-                                    >
-                                      {explainingCommand === step.content ? (
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
-                                      ) : (
-                                        <HelpCircle className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  </>
-                                )}
-
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => deleteStep(step.id)}
-                                  className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                                  <Button size="sm" variant="outline" onClick={cancelEditStep}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div
+                                  className={`flex-1 cursor-pointer ${step.type === 'manual' ? 'hover:bg-gray-100 rounded px-2 py-1' : ''}`}
+                                  onClick={() => {
+                                    if (step.type === 'manual') {
+                                      setManualStepModal({ open: true, step })
+                                    }
+                                  }}
                                 >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+                                  <code className="text-sm font-mono">{step.content}</code>
+                                </div>
+                              )}
                             </div>
-                          ))}
+                            {step.evidence && step.evidence.length > 0 && (
+                              <div className="text-xs text-gray-600">
+                                Evidence: {step.evidence.length} file(s) uploaded
+                              </div>
+                            )}
+                            {step.completed && (
+                              <div className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Completed
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => moveStep(step.id, 'up')}
+                              disabled={index === 0}
+                              className="h-8 w-8 p-0"
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => moveStep(step.id, 'down')}
+                              disabled={index === selectedMethodology.steps.length - 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+
+                            {editingStepId !== step.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditStep(step.id, step.content)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+
+                            {step.type === "command" && editingStepId !== step.id && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => runCommand(step.content)}
+                                  className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                >
+                                  Run
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => explainSelectedCommand(step.content)}
+                                  disabled={explainingCommand === step.content}
+                                  className="flex-shrink-0 h-8"
+                                >
+                                  {explainingCommand === step.content ? (
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
+                                  ) : (
+                                    <HelpCircle className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
+
+                            {/* Manual Step Actions */}
+                            {step.type === "manual" && editingStepId !== step.id && (
+                              <Button
+                                size="sm"
+                                onClick={() => setManualStepModal({ open: true, step })}
+                                className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                              >
+                                <Upload className="h-3 w-3 mr-1" />
+                                Open
+                              </Button>
+                            )}
+
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteStep(step.id)}
+                              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                      ) : (
-                        <p className="text-muted-foreground">No steps added yet.</p>
-                      )}
+                      ))}
                     </CardContent>
                   </Card>
 
@@ -1965,6 +2202,28 @@ export default function PentestMethodologies() {
         methodologyId={selectedMethodology?.id}
         onEvidenceUploaded={handleManualStepComplete}
       />
+      {/* Add this with your other modals */}
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => {
+          setImportModalOpen(false);
+          setImportData('');
+          setImportError('');
+        }}
+        onImport={importFromJSON}
+        data={importData}
+        setData={setImportData}
+        error={importError}
+      />
+
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
+        title={successModal.title}
+        message={successModal.message}
+      />
     </div>
+
+
   )
 }

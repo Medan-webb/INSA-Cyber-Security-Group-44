@@ -27,7 +27,8 @@ import {
   Sparkles,
   ChevronDown,
   MessageCircle,
-  Activity
+  Activity,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { generateAIAnalysis as generateAIAnalysisAPI } from '@/lib/ai-analysis';
@@ -366,6 +367,27 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url)
   }
 
+   function exportSelectedMetedologyToJSON() {
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      aiAnalysis,
+      commands: filteredCommands,
+      evidence: filteredEvidence,
+      projects: projects,
+      methodologies: methodologies
+    }
+
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pentest-report-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -519,14 +541,30 @@ Error: ${error.message}`;
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-6 bg-white rounded-xl shadow-sm border">
           <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              {/* Top div - Back button */}
+              <div className="flex items-center gap-3 mb-2">
+                <Link href="/">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Home
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Bottom div - Title and description */}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Security Assessment Reports</h1>
+                <p className="text-gray-600 mt-1">Comprehensive analysis of penetration testing activities and findings</p>
+              </div>
+            </div>
+
+            {/* Icon div - Separate container for the file icon */}
             <div className="p-3 bg-blue-100 rounded-lg">
               <FileText className="h-8 w-8 text-blue-600" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Security Assessment Reports</h1>
-              <p className="text-gray-600 mt-1">Comprehensive analysis of penetration testing activities and findings</p>
-            </div>
           </div>
+
 
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <Button
@@ -886,50 +924,6 @@ Error: ${error.message}`;
                   </Card>
                 </div>
 
-                {/* Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Zap className="h-5 w-5 text-orange-600" />
-                        Recent Commands
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {filteredCommands.slice(0, 5).map((cmd, index) => (
-                        <div key={index} className="flex items-center gap-3 py-2 border-b last:border-b-0">
-                          <div className={`w-2 h-2 rounded-full ${cmd.status === "success" ? "bg-green-500" :
-                            cmd.status === "failed" ? "bg-red-500" : "bg-yellow-500"
-                            }`} />
-                          <code className="text-xs font-mono flex-1 truncate">{cmd.command}</code>
-                          <Badge variant="outline" className="text-xs">
-                            {cmd.status}
-                          </Badge>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        Recent Evidence
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {filteredEvidence.slice(0, 5).map((evidence) => (
-                        <div key={evidence.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
-                          <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{evidence.filename}</p>
-                            <p className="text-xs text-gray-500 truncate">{evidence.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </div>
               </TabsContent>
               <TabsContent value="commands">
                 <Card>

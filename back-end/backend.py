@@ -33,7 +33,7 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-GEMINI_API_KEY = "your-gemin-api-key"
+GEMINI_API_KEY = "your-api-key"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================
@@ -81,228 +81,228 @@ def save_db(db: Dict[str, Any]):
         json.dump(db, f, indent=2)
 
 db = load_db()
-#initialize_default_methodologies
 
+
+# Define default methodologies globally
+default_methodologies = [
+    {
+    "id": 5,
+    "name": "Professional Comprehensive Penetration Test",
+    "description": "Enterprise-grade penetration testing methodology following industry standards (OSSTMM, NIST, PTES)",
+    "commands": [
+        "nmap -sS -sV -sC -O -p- --min-rate 5000 {{target}}",
+        "nmap --script vuln,safe,discovery -p- {{target}}",
+        "masscan -p1-65535 {{targetIP}} --rate=10000",
+        "subfinder -d {{targetDomain}} -silent",
+        "amass enum -passive -d {{targetDomain}}",
+        "gobuster dir -u https://{{target}} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,html,txt,json -t 100",
+        "gobuster vhost -u https://{{target}} -w /usr/share/wordlists/SecLists/Discovery/DNS/subdomains-top1million-5000.txt",
+        "nikto -h https://{{target}} -Tuning 1,2,3,4,5,6,7,8,9,0,a,b,c",
+        "ffuf -u https://{{target}}/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -mc 200,301,302,403",
+        "sqlmap -u 'https://{{target}}/login' --level=5 --risk=3 --batch",
+        "xsstrike -u 'https://{{target}}/search?q=test' --crawl",
+        "testssl.sh {{target}}:443",
+        "enum4linux -a {{targetIP}}",
+        "smbmap -H {{targetIP}}",
+        "snmpwalk -c public -v2c {{targetIP}}",
+        "hydra -L users.txt -P passwords.txt {{target}} ssh -t 4",
+        "nuclei -u https://{{target}} -t /root/nuclei-templates/ -severity low,medium,high,critical -rate-limit 100"
+    ],
+    "steps": [
+        {
+            "id": "step-5-0",
+            "type": "manual",
+            "content": "PRE-ENGAGEMENT: Scope definition and rules of engagement confirmation",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-1",
+            "type": "manual",
+            "content": "INTELLIGENCE GATHERING: OSINT - Passive reconnaissance (WHOIS, DNS records, certificate transparency, social media)",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-2",
+            "type": "command",
+            "content": "nmap -sS -sV -sC -O -p- --min-rate 5000 {{target}}",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-3",
+            "type": "command",
+            "content": "subfinder -d {{targetDomain}} -silent",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-4",
+            "type": "command",
+            "content": "amass enum -passive -d {{targetDomain}}",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-5",
+            "type": "command",
+            "content": "gobuster vhost -u https://{{target}} -w /usr/share/wordlists/SecLists/Discovery/DNS/subdomains-top1million-5000.txt",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-6",
+            "type": "command",
+            "content": "testssl.sh {{target}}:443",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-7",
+            "type": "manual",
+            "content": "THREAT MODELING: Analyze attack surface and identify high-value targets",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-8",
+            "type": "command",
+            "content": "gobuster dir -u https://{{target}} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,html,txt,json -t 100",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-9",
+            "type": "command",
+            "content": "nikto -h https://{{target}} -Tuning 1,2,3,4,5,6,7,8,9,0,a,b,c",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-10",
+            "type": "command",
+            "content": "nuclei -u https://{{target}} -t /root/nuclei-templates/ -severity low,medium,high,critical -rate-limit 100",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-11",
+            "type": "manual",
+            "content": "AUTHENTICATION TESTING: Test login mechanisms, session management, password policies, MFA bypass",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-12",
+            "type": "manual",
+            "content": "AUTHORIZATION TESTING: Privilege escalation, horizontal/vertical access control testing",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-13",
+            "type": "command",
+            "content": "sqlmap -u 'https://{{target}}/login' --level=5 --risk=3 --batch",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-14",
+            "type": "command",
+            "content": "xsstrike -u 'https://{{target}}/search?q=test' --crawl",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-15",
+            "type": "manual",
+            "content": "BUSINESS LOGIC TESTING: Workflow bypass, parameter manipulation, business process abuse",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-16",
+            "type": "manual",
+            "content": "CLIENT-SIDE TESTING: DOM XSS, CSRF, clickjacking, CORS misconfigurations",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-17",
+            "type": "command",
+            "content": "enum4linux -a {{targetIP}}",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-18",
+            "type": "command",
+            "content": "smbmap -H {{targetIP}}",
+            "requiresUpload": False,
+            "completed": False
+        },
+        {
+            "id": "step-5-19",
+            "type": "manual",
+            "content": "NETWORK SERVICE TESTING: Banner grabbing, service enumeration, protocol fuzzing",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-20",
+            "type": "manual",
+            "content": "POST-EXPLOITATION: Lateral movement, persistence mechanisms, data exfiltration testing",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-21",
+            "type": "manual",
+            "content": "EVIDENCE COLLECTION: Screenshots, logs, and proof-of-concept documentation",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-22",
+            "type": "manual",
+            "content": "RISK ANALYSIS: Impact assessment, business risk evaluation, CVSS scoring",
+            "requiresUpload": True,
+            "completed": False
+        },
+        {
+            "id": "step-5-23",
+            "type": "manual",
+            "content": "REPORTING: Executive summary, technical details, remediation recommendations",
+            "requiresUpload": True,
+            "completed": False
+        }
+    ]
+}
+]
+#initialize_default_methodologies
 def initialize_default_methodologies():
     """Create default methodologies if they don't exist"""
     try:
-        
-        default_methodologies = [
-            {
-                "id": 1,
-                "name": "Web Application Penetration Testing",
-                "description": "Comprehensive web application security assessment methodology",
-                "commands": [
-                    "nmap -sS -sV -sC -O {{target}}",
-                    "nmap --script vuln {{target}}",
-                    "subfinder -d {{target}}",
-                    "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                    "nikto -h http://{{target}}",
-                    "sqlmap -u 'http://{{target}}/login' --forms --batch",
-                    "nuclei -u http://{{target}} -t /root/nuclei-templates/"
-                ],
-                "steps": [
-                    {
-                        "id": "recon-section",
-                        "type": "section",
-                        "content": "Information Gathering",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "nmap_scan",
-                        "type": "command",
-                        "content": "nmap -sS -sV -sC -O {{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "subdomain_enum",
-                        "type": "command",
-                        "content": "subfinder -d {{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "dir_enum",
-                        "type": "command",
-                        "content": "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "vuln_scan",
-                        "type": "command",
-                        "content": "nikto -h http://{{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "web-section",
-                        "type": "section",
-                        "content": "Web Application Analysis",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "sql_injection",
-                        "type": "command",
-                        "content": "sqlmap -u 'http://{{target}}/login' --forms --batch",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "manual_testing",
-                        "type": "manual",
-                        "content": "Manual Security Testing - Test for business logic flaws",
-                        "requiresUpload": True,
-                        "completed": False
-                    }
-                ]
-            },
-            {
-                "id": 2,
-                "name": "Network Penetration Testing",
-                "description": "Comprehensive network infrastructure security assessment",
-                "commands": [
-                    "nmap -sS -sV -sC -p- {{target}}",
-                    "nmap --script vuln {{target}}",
-                    "masscan -p1-65535 {{targetIP}} --rate=1000",
-                    "enum4linux -a {{targetIP}}",
-                    "smbclient -L //{{targetIP}}",
-                    "snmp-check {{targetIP}}"
-                ],
-                "steps": [
-                    {
-                        "id": "network_scan",
-                        "type": "command",
-                        "content": "nmap -sn {{targetIP}}/24",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "port_scan",
-                        "type": "command",
-                        "content": "nmap -sS -sV -sC -p- {{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "vuln_scan",
-                        "type": "command",
-                        "content": "nmap --script vuln {{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "service-section",
-                        "type": "section",
-                        "content": "Service Enumeration",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "smb_enum",
-                        "type": "command",
-                        "content": "enum4linux -a {{targetIP}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "snmp_enum",
-                        "type": "command",
-                        "content": "snmp-check {{targetIP}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    }
-                ]
-            },
-            {
-                "id": 3,
-                "name": "API Security Testing",
-                "description": "REST API and web service security assessment",
-                "commands": [
-                    "nmap -sV -p 443,8443 {{target}}",
-                    "curl -X GET http://{{target}}/api/v1/users",
-                    "curl -X POST http://{{target}}/api/v1/login -d '{\"username\":\"test\",\"password\":\"test\"}'",
-                    "nikto -h http://{{target}}/api"
-                ],
-                "steps": [
-                    {
-                        "id": "api_discovery",
-                        "type": "command",
-                        "content": "curl -X OPTIONS http://{{target}}/api",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "auth_testing",
-                        "type": "manual",
-                        "content": "Authentication Testing - Test authentication mechanisms and tokens",
-                        "requiresUpload": True,
-                        "completed": False
-                    },
-                    {
-                        "id": "input_validation",
-                        "type": "manual",
-                        "content": "Input Validation Testing - Test for injection and input validation flaws",
-                        "requiresUpload": True,
-                        "completed": False
-                    }
-                ]
-            },
-            {
-                "id": 4,
-                "name": "Quick Security Assessment",
-                "description": "Rapid security assessment for time-constrained engagements",
-                "commands": [
-                    "nmap -sS -sV --top-ports 1000 {{target}}",
-                    "subfinder -d {{target}}",
-                    "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt -t 50",
-                    "nikto -h http://{{target}}"
-                ],
-                "steps": [
-                    {
-                        "id": "quick_scan",
-                        "type": "command",
-                        "content": "nmap -sS -sV --top-ports 1000 {{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    },
-                    {
-                        "id": "web_scan",
-                        "type": "command",
-                        "content": "nikto -h http://{{target}}",
-                        "requiresUpload": False,
-                        "completed": False
-                    }
-                ]
-            }
-        ]
-        
         # Check if methodologies exist in database
-        existing_ids = [m['id'] for m in db_data.get('methodologies', [])]
+        existing_ids = [m['id'] for m in db.get('methodologies', [])]
         methodologies_added = 0
         
         for methodology in default_methodologies:
             if methodology['id'] not in existing_ids:
-                db_data.setdefault('methodologies', []).append(methodology)
+                db.setdefault('methodologies', []).append(methodology)
                 methodologies_added += 1
                 print(f"✅ Added default methodology: {methodology['name']}")
         
         if methodologies_added > 0:
-            save_db(db_data)
+            save_db(db)
             print(f"🎯 Initialized {methodologies_added} default methodologies")
         else:
             print("📋 Default methodologies already exist")
             
-        return db_data['methodologies']
-        
     except Exception as e:
         print(f"❌ Error initializing default methodologies: {e}")
-        return []
 
-initialize_default_methodologies()  
 # ============================
 # Data Models
 # ============================
@@ -445,13 +445,11 @@ def update_project(project_id: int, p: Project):
 @app.get("/methodologies")
 def list_methodologies():
     """Return both default and user methodologies"""
-    default_methodologies = initialize_default_methodologies() 
-    user_methodologies = db.get("methodologies", [])
+    # Initialize defaults if no methodologies exist
+    if not db.get("methodologies"):
+        initialize_default_methodologies()
     
-    # Merge defaults and user methodologies
-    all_methodologies = default_methodologies + user_methodologies
-    
-    return all_methodologies
+    return db.get("methodologies", [])
 @app.post("/methodologies")
 def add_methodology(m: MethodologyModel):
     new = m.dict()
@@ -482,223 +480,6 @@ def delete_methodology(mid: int):
     db["methodologies"] = new_list
     save_db(db)
     return {"ok": True}
-def initialize_default_methodologies():
-    """Create default methodologies if they don't exist"""
-    db_data = load_db()
-    
-    default_methodologies = [
-        {
-            "id": 1,
-            "name": "Web Application Penetration Testing",
-            "description": "Comprehensive web application security assessment methodology",
-            "commands": [
-                "nmap -sS -sV -sC -O {{target}}",
-                "nmap --script vuln {{target}}",
-                "subfinder -d {{target}}",
-                "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                "nikto -h http://{{target}}",
-                "sqlmap -u 'http://{{target}}/login' --forms --batch",
-                "nuclei -u http://{{target}} -t /root/nuclei-templates/"
-            ],
-            "steps": [
-                {
-                    "id": "recon",
-                    "type": "section",
-                    "title": "Information Gathering",
-                    "description": "Passive and active reconnaissance"
-                },
-                {
-                    "id": "nmap_scan",
-                    "type": "command",
-                    "title": "Network Scanning",
-                    "description": "Perform comprehensive port scanning",
-                    "command": "nmap -sS -sV -sC -O {{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "subdomain_enum",
-                    "type": "command",
-                    "title": "Subdomain Enumeration",
-                    "description": "Discover subdomains and related assets",
-                    "command": "subfinder -d {{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "dir_enum",
-                    "type": "command",
-                    "title": "Directory Brute-forcing",
-                    "description": "Discover hidden directories and files",
-                    "command": "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                    "requires_upload": False
-                },
-                {
-                    "id": "vuln_scan",
-                    "type": "command",
-                    "title": "Vulnerability Scanning",
-                    "description": "Automated vulnerability assessment",
-                    "command": "nikto -h http://{{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "web_analysis",
-                    "type": "section",
-                    "title": "Web Application Analysis",
-                    "description": "In-depth web security testing"
-                },
-                {
-                    "id": "sql_injection",
-                    "type": "command",
-                    "title": "SQL Injection Testing",
-                    "description": "Test for SQL injection vulnerabilities",
-                    "command": "sqlmap -u 'http://{{target}}/login' --forms --batch",
-                    "requires_upload": False
-                },
-                {
-                    "id": "manual_testing",
-                    "type": "manual",
-                    "title": "Manual Security Testing",
-                    "description": "Manual testing for business logic flaws",
-                    "requires_upload": True
-                }
-            ]
-        },
-        {
-            "id": 2,
-            "name": "Network Penetration Testing",
-            "description": "Comprehensive network infrastructure security assessment",
-            "commands": [
-                "nmap -sS -sV -sC -p- {{target}}",
-                "nmap --script vuln {{target}}",
-                "masscan -p1-65535 {{targetIP}} --rate=1000",
-                "enum4linux -a {{targetIP}}",
-                "smbclient -L //{{targetIP}}",
-                "snmp-check {{targetIP}}"
-            ],
-            "steps": [
-                {
-                    "id": "network_scan",
-                    "type": "command",
-                    "title": "Network Discovery",
-                    "description": "Discover live hosts and network topology",
-                    "command": "nmap -sn {{targetIP}}/24",
-                    "requires_upload": False
-                },
-                {
-                    "id": "port_scan",
-                    "type": "command",
-                    "title": "Port Scanning",
-                    "description": "Comprehensive port scanning",
-                    "command": "nmap -sS -sV -sC -p- {{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "vuln_scan",
-                    "type": "command",
-                    "title": "Vulnerability Scanning",
-                    "description": "Network vulnerability assessment",
-                    "command": "nmap --script vuln {{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "service_enum",
-                    "type": "section",
-                    "title": "Service Enumeration",
-                    "description": "Service-specific enumeration and testing"
-                },
-                {
-                    "id": "smb_enum",
-                    "type": "command",
-                    "title": "SMB Enumeration",
-                    "description": "SMB share and user enumeration",
-                    "command": "enum4linux -a {{targetIP}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "snmp_enum",
-                    "type": "command",
-                    "title": "SNMP Enumeration",
-                    "description": "SNMP service information gathering",
-                    "command": "snmp-check {{targetIP}}",
-                    "requires_upload": False
-                }
-            ]
-        },
-        {
-            "id": 3,
-            "name": "API Security Testing",
-            "description": "REST API and web service security assessment",
-            "commands": [
-                "nmap -sV -p 443,8443 {{target}}",
-                "curl -X GET http://{{target}}/api/v1/users",
-                "curl -X POST http://{{target}}/api/v1/login -d '{\"username\":\"test\",\"password\":\"test\"}'",
-                "nikto -h http://{{target}}/api"
-            ],
-            "steps": [
-                {
-                    "id": "api_discovery",
-                    "type": "command",
-                    "title": "API Endpoint Discovery",
-                    "description": "Discover API endpoints and methods",
-                    "command": "curl -X OPTIONS http://{{target}}/api",
-                    "requires_upload": False
-                },
-                {
-                    "id": "auth_testing",
-                    "type": "manual",
-                    "title": "Authentication Testing",
-                    "description": "Test authentication mechanisms and tokens",
-                    "requires_upload": True
-                },
-                {
-                    "id": "input_validation",
-                    "type": "manual",
-                    "title": "Input Validation Testing",
-                    "description": "Test for injection and input validation flaws",
-                    "requires_upload": True
-                }
-            ]
-        },
-        {
-            "id": 4,
-            "name": "Quick Security Assessment",
-            "description": "Rapid security assessment for time-constrained engagements",
-            "commands": [
-                "nmap -sS -sV --top-ports 1000 {{target}}",
-                "subfinder -d {{target}}",
-                "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt -t 50",
-                "nikto -h http://{{target}}"
-            ],
-            "steps": [
-                {
-                    "id": "quick_scan",
-                    "type": "command",
-                    "title": "Quick Network Scan",
-                    "description": "Rapid port and service discovery",
-                    "command": "nmap -sS -sV --top-ports 1000 {{target}}",
-                    "requires_upload": False
-                },
-                {
-                    "id": "web_scan",
-                    "type": "command",
-                    "title": "Web Application Scan",
-                    "description": "Quick web vulnerability assessment",
-                    "command": "nikto -h http://{{target}}",
-                    "requires_upload": False
-                }
-            ]
-        }
-    ]
-    
-    # Check if methodologies exist in database
-    existing_ids = [m['id'] for m in db_data.get('methodologies', [])]
-    
-    for methodology in default_methodologies:
-        if methodology['id'] not in existing_ids:
-            db_data.setdefault('methodologies', []).append(methodology)
-            print(f"✅ Added default methodology: {methodology['name']}")
-    
-    save_db(db_data)
-    return db_data['methodologies']
 
 # ============================
 # Findings Endpoints
@@ -875,6 +656,80 @@ async def get_evidence_file(evidence_id: int):
     except Exception as e:
         print(f"❌ Error serving evidence file: {e}")
         raise HTTPException(status_code=500, detail=f"Error serving file: {str(e)}")
+@app.delete("/api/evidence/{evidence_id}")
+async def delete_evidence(evidence_id: int):
+    """Delete evidence file and record"""
+    try:
+        print(f"🗑️ Deleting evidence {evidence_id}")
+        
+        # Find the evidence record
+        evidence = next((e for e in db["evidence"] if e["id"] == evidence_id), None)
+        if not evidence:
+            raise HTTPException(status_code=404, detail="Evidence not found")
+
+        # Delete the file if it exists
+        file_path = evidence.get("saved_path") or evidence.get("path")
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                print(f"✅ Deleted file: {file_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete file: {e}")
+
+        # Remove from database
+        db["evidence"] = [e for e in db["evidence"] if e["id"] != evidence_id]
+        save_db(db)
+
+        return {"ok": True, "message": "Evidence deleted successfully"}
+
+    except Exception as e:
+        print(f"❌ Error deleting evidence: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete evidence: {str(e)}")
+
+@app.delete("/api/evidence/{evidence_id}")
+async def delete_evidence(evidence_id: int):
+    """Delete evidence file and record"""
+    try:
+        print(f"🗑️ Deleting evidence {evidence_id}")
+        
+        # Find the evidence record
+        evidence = None
+        for i, ev in enumerate(db["evidence"]):
+            if ev["id"] == evidence_id:
+                evidence = ev
+                break
+        
+        if not evidence:
+            print(f"❌ Evidence {evidence_id} not found in database")
+            raise HTTPException(status_code=404, detail="Evidence not found")
+
+        # Delete the file if it exists
+        file_path = evidence.get("saved_path") or evidence.get("path")
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                print(f"✅ Deleted file: {file_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete file: {e}")
+
+        # Remove from database
+        db["evidence"] = [e for e in db["evidence"] if e["id"] != evidence_id]
+        save_db(db)
+
+        print(f"✅ Evidence {evidence_id} deleted successfully")
+        return {"ok": True, "message": "Evidence deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting evidence: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete evidence: {str(e)}")
+
+# Also add this endpoint for manual evidence specifically
+@app.delete("/manual-evidence/{evidence_id}")
+async def delete_manual_evidence(evidence_id: int):
+    """Delete manual evidence (alias for the main endpoint)"""
+    return await delete_evidence(evidence_id)
 # ============================
 # Command Execution Endpoints
 # ============================
@@ -1094,82 +949,106 @@ async def get_ai_status():
             status["online_gpt"]["status"] = f"Error: {str(e)}"
 
     return status
-
+def prepare_commands_with_outputs(commands):
+    """Enhance commands with outputs for AI analysis"""
+    enhanced_commands = []
+    for cmd in commands:
+        enhanced_cmd = cmd.copy()
+        # Ensure output is included
+        if 'output' not in enhanced_cmd:
+            enhanced_cmd['output'] = enhanced_cmd.get('stdout', '') or 'No output available'
+        enhanced_commands.append(enhanced_cmd)
+    return enhanced_commands
 def create_online_analysis_prompt(data: OnlineAIAnalysisRequest):
-    """Create optimized prompt for online AI models"""
+    """Create optimized prompt for online AI models with FULL command outputs"""
     commands = data.commands
     evidence = data.evidence
     projects = data.projects
     methodologies = data.methodologies
     custom_prompt = data.customPrompt or ''
 
-    # Build command summary
+    # Build command summary WITH OUTPUTS
     command_summary = []
-    for cmd in commands[-15:]:  # Last 15 commands
+    for cmd in commands[-20:]:  # Last 20 commands with outputs
         status = cmd.get('status', 'unknown')
-        command_text = cmd.get('command', '')[:100]
-        command_summary.append(f"• [{status}] {command_text}")
+        command_text = cmd.get('command', '')[:80]
+        output = cmd.get('output', '')
+        
+        # Only include commands that have meaningful output
+        if output and len(output.strip()) > 10:  # At least 10 characters of output
+            output_preview = output[:500] + "..." if len(output) > 500 else output
+            command_summary.append(f"""
+🔧 COMMAND: {command_text}
+📊 STATUS: {status}
+📋 OUTPUT:
+{output_preview}
+{'-'*50}""")
 
     # Build evidence summary
     evidence_summary = []
-    for ev in evidence[:10]:  # First 10 evidence files
+    for ev in evidence[:10]:
         filename = ev.get('filename', 'Unknown')
         description = ev.get('description', 'No description')
         evidence_summary.append(f"• {filename}: {description}")
 
-    prompt = f"""As a senior cybersecurity analyst, analyze this penetration testing data and provide a professional security assessment report.
+    prompt = f"""As a senior cybersecurity analyst, analyze these ACTUAL PENETRATION TESTING RESULTS and provide a professional security assessment.
+
+CRITICAL: Focus your analysis on the ACTUAL COMMAND OUTPUTS below, not just the commands that were run.
 
 CONTEXT:
-- Assessment Scope: {len(projects)} projects, {len(commands)} commands executed, {len(evidence)} evidence files collected
-- Methodologies Used: {', '.join([m.get('name', 'Unknown') for m in methodologies]) if methodologies else 'None specified'}
+- Assessment Scope: {len(projects)} projects, {len(commands)} commands executed, {len(evidence)} evidence files
+- Methodologies: {', '.join([m.get('name', 'Unknown') for m in methodologies]) if methodologies else 'None'}
 
-COMMAND EXECUTION SUMMARY:
-{chr(10).join(command_summary)}
+ACTUAL COMMAND RESULTS (Most Recent):
+{chr(10).join(command_summary) if command_summary else '❌ No command outputs available for analysis'}
 
 EVIDENCE COLLECTED:
 {chr(10).join(evidence_summary) if evidence_summary else '• No evidence files collected'}
 
-{custom_prompt and f'SPECIFIC FOCUS AREA: {custom_prompt}' or ''}
+{custom_prompt and f'SPECIFIC FOCUS: {custom_prompt}' or ''}
 
-Please provide a comprehensive security analysis with:
+ANALYSIS REQUIREMENTS:
 
-EXECUTIVE SUMMARY:
-- Brief overview of assessment scope and key findings
-- Overall risk assessment
+1. **EXECUTIVE SUMMARY** - Based on ACTUAL FINDINGS in the command outputs
+2. **TECHNICAL FINDINGS** - Extract specific security issues from the outputs:
+   - Open ports and services found
+   - Vulnerabilities detected
+   - Misconfigurations identified
+   - Information disclosure
+   - Security weaknesses
 
-TECHNICAL FINDINGS:
-- List 3-5 key security findings with:
-  * Severity (Critical/High/Medium/Low/Info)
-  * Clear title
-  * Detailed description with evidence references
-  * Specific remediation recommendations
-  * Affected assets/components
+3. For EACH finding, provide:
+   - Severity (Critical/High/Medium/Low/Info) - based on ACTUAL IMPACT
+   - Clear title describing the ACTUAL ISSUE found
+   - Detailed description with SPECIFIC EVIDENCE from command outputs
+   - Direct quotes or data from the outputs that prove the finding
+   - Specific remediation steps
 
-RISK ASSESSMENT:
-- Criticality analysis
-- Potential impact
-- Exploitation likelihood
+4. **RISK ASSESSMENT** - Based on actual discovered issues
+5. **RECOMMENDATIONS** - Specific to the vulnerabilities found
 
-RECOMMENDATIONS:
-- Prioritized remediation steps
-- Immediate actions vs. long-term improvements
+IMPORTANT: Your analysis MUST be grounded in the actual command outputs provided. If outputs show no vulnerabilities, state that clearly.
 
-Format the response as structured JSON that can be parsed programmatically with the following structure:
+Format as JSON:
 {{
-  "summary": "executive summary here",
+  "summary": "Executive summary based on actual findings",
   "findings": [
     {{
       "severity": "high",
-      "title": "Finding title",
-      "description": "Detailed description",
-      "evidence": ["evidence reference 1", "evidence reference 2"],
-      "recommendation": "Specific remediation steps"
+      "title": "Specific finding from outputs",
+      "description": "Detailed description with evidence from command outputs",
+      "evidence": ["command_output_reference_1", "command_output_reference_2"],
+      "recommendation": "Specific remediation based on the finding"
     }}
-  ]
+  ],
+  "statistics": {{
+    "commandsWithOutputs": {len([c for c in commands if c.get('output')])},
+    "totalFindings": 0,
+    "criticalFindings": 0
+  }}
 }}"""
 
     return prompt
-
 def smart_detailed_analysis(commands, evidence, custom_prompt="", selected_project_id=None):
     """Generate detailed analysis with actual command output parsing for specific project"""
     try:
@@ -1229,7 +1108,7 @@ def filter_project_data(commands, evidence, selected_project_id):
     return project_commands, project_evidence
 
 def analyze_command_outputs(commands):
-    """Deep analysis of command outputs to extract specific findings"""
+    """Deep analysis of ACTUAL command outputs to extract specific findings"""
     findings = []
     discovered_assets = {
         'subdomains': set(),
@@ -1238,7 +1117,8 @@ def analyze_command_outputs(commands):
         'technologies': set(),
         'vulnerabilities': set(),
         'directories': set(),
-        'files': set()
+        'files': set(),
+        'services': set()
     }
 
     for cmd in commands:
@@ -1249,47 +1129,67 @@ def analyze_command_outputs(commands):
         if status != 'success' or not output:
             continue
 
-        # Nmap scan analysis
+        print(f"🔍 Analyzing output for: {command[:50]}...")
+        print(f"📏 Output length: {len(output)} characters")
+
+        # Enhanced Nmap analysis
         if 'nmap' in command:
             nmap_findings = analyze_nmap_output(command, output)
             findings.extend(nmap_findings)
 
-            # Extract assets from nmap
-            discovered_assets['ip_addresses'].update(extract_ips(output))
-            discovered_assets['open_ports'].update(extract_ports(output))
-            discovered_assets['technologies'].update(extract_technologies(output))
-
-        # Subdomain enumeration
+        # Enhanced subdomain analysis
         elif any(tool in command for tool in ['subfinder', 'amass', 'sublist3r', 'assetfinder']):
             subdomain_findings = analyze_subdomain_output(command, output)
             findings.extend(subdomain_findings)
-            discovered_assets['subdomains'].update(extract_subdomains(output))
 
-        # Directory brute-forcing
+        # Enhanced directory brute-forcing
         elif any(tool in command for tool in ['gobuster', 'dirb', 'dirbuster', 'feroxbuster', 'ffuf']):
             directory_findings = analyze_directory_output(command, output)
             findings.extend(directory_findings)
-            discovered_assets['directories'].update(extract_directories(output))
-            discovered_assets['files'].update(extract_files(output))
 
-        # Vulnerability scanning
+        # Enhanced vulnerability scanning
         elif any(tool in command for tool in ['sqlmap', 'nikto', 'wpscan', 'nuclei']):
             vuln_findings = analyze_vulnerability_output(command, output)
             findings.extend(vuln_findings)
-            discovered_assets['vulnerabilities'].update(extract_vulnerabilities(output))
 
-        # General information gathering
-        elif any(tool in command for tool in ['whois', 'dig', 'nslookup', 'host']):
-            info_findings = analyze_info_output(command, output)
-            findings.extend(info_findings)
-            discovered_assets['ip_addresses'].update(extract_ips(output))
+        # Extract all assets from every command output
+        extract_assets_from_output(output, discovered_assets)
 
     # Create findings from discovered assets
     asset_findings = create_asset_findings(discovered_assets)
     findings.extend(asset_findings)
 
+    print(f"🎯 Total findings from outputs: {len(findings)}")
     return findings, discovered_assets
 
+def extract_assets_from_output(output, discovered_assets):
+    """Extract all possible security assets from any command output"""
+    # IP addresses
+    ips = extract_ips(output)
+    discovered_assets['ip_addresses'].update(ips)
+    
+    # Subdomains
+    subdomains = extract_subdomains(output)
+    discovered_assets['subdomains'].update(subdomains)
+    
+    # Open ports (from any output, not just nmap)
+    ports = extract_ports(output)
+    discovered_assets['open_ports'].update(ports)
+    
+    # Technologies
+    technologies = extract_technologies(output)
+    discovered_assets['technologies'].update(technologies)
+    
+    # Vulnerabilities
+    vulnerabilities = extract_vulnerabilities(output)
+    discovered_assets['vulnerabilities'].update(vulnerabilities)
+    
+    # Directories and files
+    directories = extract_directories(output)
+    discovered_assets['directories'].update(directories)
+    
+    files = extract_files(output)
+    discovered_assets['files'].update(files)
 def analyze_nmap_output(command, output):
     """Analyze nmap scan results"""
     findings = []
@@ -1762,16 +1662,22 @@ def create_structured_fallback(response_text: str, original_request: OnlineAIAna
     }
 @app.post("/api/ai-analysis")
 async def ai_analysis(request: AIAnalysisRequest):
-    """Main AI analysis endpoint - handles both local and online"""
-    print(f"🔍 AI analysis request received - Online: {request.useOnline}, Provider: {request.onlineProvider}")
+    """Main AI analysis endpoint - now with FULL command outputs"""
+    print(f"🔍 AI analysis request - Online: {request.useOnline}")
     print(f"📊 Data: {len(request.commands)} commands, {len(request.evidence)} evidence files")
 
     try:
+        # Enhance commands with outputs
+        enhanced_commands = prepare_commands_with_outputs(request.commands)
+        
+        # Count commands with meaningful outputs
+        commands_with_outputs = len([c for c in enhanced_commands if c.get('output') and len(c.get('output', '').strip()) > 10])
+        print(f"📋 Commands with outputs: {commands_with_outputs}/{len(enhanced_commands)}")
+
         if request.useOnline:
             print(f"🌐 Using online AI analysis with {request.onlineProvider}")
-            # Create online request
             online_request = OnlineAIAnalysisRequest(
-                commands=request.commands,
+                commands=enhanced_commands,  # Use enhanced commands with outputs
                 evidence=request.evidence,
                 projects=request.projects,
                 methodologies=request.methodologies,
@@ -1781,45 +1687,35 @@ async def ai_analysis(request: AIAnalysisRequest):
             )
             result = await online_ai_analysis(online_request)
             print(f"✅ Online AI analysis completed with {len(result.get('findings', []))} findings")
-            return result
         else:
             print("🖥️ Using local AI analysis")
-            # Use local analysis
             result = smart_detailed_analysis(
-                request.commands,
+                enhanced_commands,  # Use enhanced commands with outputs
                 request.evidence,
                 request.customPrompt or "",
                 request.selectedProjectId
             )
             print(f"✅ Local analysis completed with {len(result.get('findings', []))} findings")
-            return result
+        
+        return result
             
     except Exception as e:
         print(f"❌ AI analysis failed: {e}")
         import traceback
         traceback.print_exc()
         
-        # Fallback response
         return {
-            "summary": f"Analysis completed with issues: {str(e)}",
-            "findings": [
-                {
-                    "severity": "info",
-                    "title": "Analysis Service Temporarily Unavailable",
-                    "description": f"The AI analysis encountered an error: {str(e)}",
-                    "evidence": [],
-                    "recommendation": "Please try again or check the backend service logs."
-                }
-            ],
+            "summary": f"Analysis failed: {str(e)}",
+            "findings": [],
             "statistics": {
                 "totalCommands": len(request.commands),
                 "successfulCommands": len([c for c in request.commands if c.get('status') == 'success']),
                 "failedCommands": len([c for c in request.commands if c.get('status') == 'failed']),
                 "evidenceCount": len(request.evidence),
-                "criticalFindings": 0
+                "criticalFindings": 0,
+                "commandsWithOutputs": 0
             }
         }
-
 @app.post("/api/online-ai-analysis")
 async def online_ai_analysis(request: OnlineAIAnalysisRequest):
     """Online AI analysis endpoint"""
@@ -2835,7 +2731,7 @@ CONTEXT:
 - Completed Steps: {request.completed_steps if request.completed_steps else 'None'}
 - Custom Instructions: {request.custom_prompt or 'None'}
 
-TASK: Suggest 3-5 highly relevant penetration testing commands that would be appropriate for the current methodology phase.
+TASK: Suggest 3-7  penetration testing commands that would be appropriate for the current methodology phase consider the current methodology name .
 
 For each command, provide:
 1. The exact command string (use {{target}} for the target variable)
@@ -3055,3 +2951,4 @@ def root():
         "service": "Pentest Orchestration API",
         "shared_methodologies_count": len(methodologies_db)
     }
+
