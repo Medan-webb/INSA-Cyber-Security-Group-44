@@ -142,6 +142,8 @@ export default function PentestMethodologies() {
 
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
 
+  const [isImporting, setIsImporting] = useState(false);
+
   useEffect(() => {
     loadMethodologies()
     loadProjects()
@@ -890,28 +892,82 @@ export default function PentestMethodologies() {
     );
   };
 
-  // Add this file input import function for file uploads
-  async function handleFileImport(event) {
-    const file = event.target.files[0];
+  async function handleFileImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
     if (!file) return;
+
+    // Check if it's a JSON file
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      alert('Please select a JSON file');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportError('');
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result;
         if (typeof content === 'string') {
-          setImportData(content);
-          setImportModalOpen(true);
-          setImportError('');
+          // Parse to validate JSON
+          const parsedData = JSON.parse(content);
+
+          // Validate the structure
+          if (!parsedData.methodology || !parsedData.methodology.name) {
+            setImportError('Invalid methodology file structure');
+            setIsImporting(false);
+            return;
+          }
+
+          // Create FormData for file upload
+          const formData = new FormData();
+          formData.append('file', file);
+
+          console.log('📤 Uploading methodology file...');
+
+          const response = await fetch(`${apiBase}/api/import-methodology`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Import successful:', result);
+
+            // Show success modal
+            setSuccessModal({
+              isOpen: true,
+              title: 'Import Successful!',
+              message: result.message || `Methodology "${result.methodology.name}" has been imported successfully.`
+            });
+
+            // Reload methodologies to show the new imported one
+            await loadMethodologies();
+
+            // Select the newly imported methodology
+            if (result.methodology) {
+              setSelectedMethodology(result.methodology);
+            }
+
+          } else {
+            const errorText = await response.text();
+            console.error('❌ Import failed:', errorText);
+            setImportError(`Import failed: ${response.status} ${response.statusText}`);
+          }
         }
       } catch (error) {
+        console.error('❌ Error reading file:', error);
         setImportError('Failed to read file: ' + error.message);
+      } finally {
+        setIsImporting(false);
       }
     };
 
     reader.onerror = () => {
       setImportError('Failed to read the file');
+      setIsImporting(false);
     };
 
     reader.readAsText(file);
@@ -1460,10 +1516,26 @@ export default function PentestMethodologies() {
                         variant="outline"
                         className="flex items-center gap-2"
                         onClick={() => document.getElementById('import-file')?.click()}
+                        disabled={isImporting}
                       >
-                        <Upload className="h-4 w-4" />
-                        Import from File
+                        {isImporting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2" />
+                            Importing...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            Import from File
+                          </>
+                        )}
                       </Button>
+
+                      {importError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                          <p className="text-red-700 text-sm">{importError}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1697,6 +1769,12 @@ export default function PentestMethodologies() {
                             }
                             value={newStepContent}
                             onChange={(e) => setNewStepContent(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault(); // optional: prevents form submission if inside a form
+                                addStepToMethodology();     // replace with your actual submit function
+                              }
+                            }}
                             className="font-mono text-sm flex-1"
                           />
                           <Button
@@ -1730,7 +1808,7 @@ export default function PentestMethodologies() {
                           </div>
                         )}
                       </div>
-                      
+
                       {selectedMethodology.steps?.map((step, index) => (
                         <div
                           key={step.id}
@@ -2221,6 +2299,10 @@ export default function PentestMethodologies() {
         onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
         title={successModal.title}
         message={successModal.message}
+        onAction={() => {
+          // The methodology is already selected, just close the modal
+          setSuccessModal({ isOpen: false, title: '', message: '' });
+        }}
       />
     </div>
 

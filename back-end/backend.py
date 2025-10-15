@@ -33,7 +33,7 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-GEMINI_API_KEY = "your-api-key"
+GEMINI_API_KEY = "AIzaSyCRwBoOyH94DLdpdlFDgKx6u_6T3GKBGnM"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================
@@ -81,11 +81,11 @@ def save_db(db: Dict[str, Any]):
         json.dump(db, f, indent=2)
 
 db = load_db()
-
+# Define default methodologies globally
 
 # Define default methodologies globally
 default_methodologies = [
-    {
+{
     "id": 5,
     "name": "Professional Comprehensive Penetration Test",
     "description": "Enterprise-grade penetration testing methodology following industry standards (OSSTMM, NIST, PTES)",
@@ -656,36 +656,6 @@ async def get_evidence_file(evidence_id: int):
     except Exception as e:
         print(f"❌ Error serving evidence file: {e}")
         raise HTTPException(status_code=500, detail=f"Error serving file: {str(e)}")
-@app.delete("/api/evidence/{evidence_id}")
-async def delete_evidence(evidence_id: int):
-    """Delete evidence file and record"""
-    try:
-        print(f"🗑️ Deleting evidence {evidence_id}")
-        
-        # Find the evidence record
-        evidence = next((e for e in db["evidence"] if e["id"] == evidence_id), None)
-        if not evidence:
-            raise HTTPException(status_code=404, detail="Evidence not found")
-
-        # Delete the file if it exists
-        file_path = evidence.get("saved_path") or evidence.get("path")
-        if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-                print(f"✅ Deleted file: {file_path}")
-            except Exception as e:
-                print(f"⚠️ Could not delete file: {e}")
-
-        # Remove from database
-        db["evidence"] = [e for e in db["evidence"] if e["id"] != evidence_id]
-        save_db(db)
-
-        return {"ok": True, "message": "Evidence deleted successfully"}
-
-    except Exception as e:
-        print(f"❌ Error deleting evidence: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete evidence: {str(e)}")
-
 @app.delete("/api/evidence/{evidence_id}")
 async def delete_evidence(evidence_id: int):
     """Delete evidence file and record"""
@@ -2580,90 +2550,414 @@ def initialize_sample_shared_methodologies():
         if methodologies_db:
             print("📚 Sample methodologies already initialized")
             return
-
         sample_methodologies = [
             {
                 "id": str(uuid.uuid4()),
-                "title": "Comprehensive Web Application Testing",
-                "description": "A complete methodology for testing modern web applications including API endpoints and SPA frameworks.",
+                "title": "Professional Comprehensive Penetration Test",
+                "description": "Enterprise-grade penetration testing methodology following industry standards (OSSTMM, NIST, PTES)",
                 "methodology_data": {
-                    "id": 1001,
-                    "name": "Web App Comprehensive Test",
-                    "description": "Complete web application security assessment",
+                    "id": 5,
+                    "name": "Professional Comprehensive Penetration Test",
+                    "description": "Enterprise-grade penetration testing methodology following industry standards (OSSTMM, NIST, PTES)",
                     "commands": [
-                        "nmap -sS -sV -sC -O {{target}}",
-                        "subfinder -d {{target}}",
-                        "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
-                        "nikto -h http://{{target}}",
-                        "sqlmap -u 'http://{{target}}/login' --forms --batch"
+                        "nmap -sS -sV -sC -O -p- --min-rate 5000 {{target}}",
+                        "nmap --script vuln,safe,discovery -p- {{target}}",
+                        "masscan -p1-65535 {{targetIP}} --rate=10000",
+                        "subfinder -d {{targetDomain}} -silent",
+                        "amass enum -passive -d {{targetDomain}}",
+                        "gobuster dir -u https://{{target}} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,html,txt,json -t 100",
+                        "gobuster vhost -u https://{{target}} -w /usr/share/wordlists/SecLists/Discovery/DNS/subdomains-top1million-5000.txt",
+                        "nikto -h https://{{target}} -Tuning 1,2,3,4,5,6,7,8,9,0,a,b,c",
+                        "ffuf -u https://{{target}}/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -mc 200,301,302,403",
+                        "sqlmap -u 'https://{{target}}/login' --level=5 --risk=3 --batch",
+                        "xsstrike -u 'https://{{target}}/search?q=test' --crawl",
+                        "testssl.sh {{target}}:443",
+                        "enum4linux -a {{targetIP}}",
+                        "smbmap -H {{targetIP}}",
+                        "snmpwalk -c public -v2c {{targetIP}}",
+                        "hydra -L users.txt -P passwords.txt {{target}} ssh -t 4",
+                        "nuclei -u https://{{target}} -t /root/nuclei-templates/ -severity low,medium,high,critical -rate-limit 100"
                     ],
                     "steps": [
                         {
-                            "id": "recon",
-                            "type": "section",
-                            "title": "Information Gathering",
-                            "description": "Passive and active reconnaissance"
+                            "id": "step-5-0",
+                            "type": "manual",
+                            "content": "PRE-ENGAGEMENT: Scope definition and rules of engagement confirmation",
+                            "requiresUpload": True,
+                            "completed": False
                         },
                         {
-                            "id": "nmap_scan",
+                            "id": "step-5-1",
+                            "type": "manual",
+                            "content": "INTELLIGENCE GATHERING: OSINT - Passive reconnaissance (WHOIS, DNS records, certificate transparency, social media)",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-2",
                             "type": "command",
-                            "title": "Network Scanning",
-                            "description": "Perform comprehensive port scanning",
-                            "command": "nmap -sS -sV -sC -O {{target}}",
-                            "requires_upload": False
+                            "content": "nmap -sS -sV -sC -O -p- --min-rate 5000 {{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-3",
+                            "type": "command",
+                            "content": "subfinder -d {{targetDomain}} -silent",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-4",
+                            "type": "command",
+                            "content": "amass enum -passive -d {{targetDomain}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-5",
+                            "type": "command",
+                            "content": "gobuster vhost -u https://{{target}} -w /usr/share/wordlists/SecLists/Discovery/DNS/subdomains-top1million-5000.txt",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-6",
+                            "type": "command",
+                            "content": "testssl.sh {{target}}:443",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-7",
+                            "type": "manual",
+                            "content": "THREAT MODELING: Analyze attack surface and identify high-value targets",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-8",
+                            "type": "command",
+                            "content": "gobuster dir -u https://{{target}} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,html,txt,json -t 100",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-9",
+                            "type": "command",
+                            "content": "nikto -h https://{{target}} -Tuning 1,2,3,4,5,6,7,8,9,0,a,b,c",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-10",
+                            "type": "command",
+                            "content": "nuclei -u https://{{target}} -t /root/nuclei-templates/ -severity low,medium,high,critical -rate-limit 100",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-11",
+                            "type": "manual",
+                            "content": "AUTHENTICATION TESTING: Test login mechanisms, session management, password policies, MFA bypass",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-12",
+                            "type": "manual",
+                            "content": "AUTHORIZATION TESTING: Privilege escalation, horizontal/vertical access control testing",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-13",
+                            "type": "command",
+                            "content": "sqlmap -u 'https://{{target}}/login' --level=5 --risk=3 --batch",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-14",
+                            "type": "command",
+                            "content": "xsstrike -u 'https://{{target}}/search?q=test' --crawl",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-15",
+                            "type": "manual",
+                            "content": "BUSINESS LOGIC TESTING: Workflow bypass, parameter manipulation, business process abuse",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-16",
+                            "type": "manual",
+                            "content": "CLIENT-SIDE TESTING: DOM XSS, CSRF, clickjacking, CORS misconfigurations",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-17",
+                            "type": "command",
+                            "content": "enum4linux -a {{targetIP}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-18",
+                            "type": "command",
+                            "content": "smbmap -H {{targetIP}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-19",
+                            "type": "manual",
+                            "content": "NETWORK SERVICE TESTING: Banner grabbing, service enumeration, protocol fuzzing",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-20",
+                            "type": "manual",
+                            "content": "POST-EXPLOITATION: Lateral movement, persistence mechanisms, data exfiltration testing",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-21",
+                            "type": "manual",
+                            "content": "EVIDENCE COLLECTION: Screenshots, logs, and proof-of-concept documentation",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-22",
+                            "type": "manual",
+                            "content": "RISK ANALYSIS: Impact assessment, business risk evaluation, CVSS scoring",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-5-23",
+                            "type": "manual",
+                            "content": "REPORTING: Executive summary, technical details, remediation recommendations",
+                            "requiresUpload": True,
+                            "completed": False
                         }
                     ]
                 },
                 "author": "Security Expert",
-                "tags": ["web", "api", "comprehensive", "owasp"],
-                "likes": 15,
-                "downloads": 8,
+                "tags": ["comprehensive", "enterprise", "nmap", "web", "network", "osint"],
+                "likes": 25,
+                "downloads": 18,
                 "comments": [
                     {
                         "id": str(uuid.uuid4()),
-                        "author": "PenTester123",
-                        "content": "Great methodology! Used it on my last engagement and found critical issues.",
+                        "author": "SeniorPentester",
+                        "content": "Excellent comprehensive methodology! Used this on multiple enterprise engagements with great success.",
                         "rating": 5,
                         "created_at": time.time() - 86400
+                    },
+                    {
+                        "id": str(uuid.uuid4()),
+                        "author": "SecurityAnalyst",
+                        "content": "Very thorough approach. The step-by-step structure makes it easy to follow during assessments.",
+                        "rating": 4,
+                        "created_at": time.time() - 172800
                     }
                 ],
                 "created_at": time.time() - 2592000,  # 30 days ago
                 "updated_at": time.time() - 86400,    # 1 day ago
                 "is_public": True,
-                "views": 42
+                "views": 156
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "title": "Web Application Security Assessment",
+                "description": "Comprehensive web application testing methodology covering OWASP Top 10 vulnerabilities and modern web app security",
+                "methodology_data": {
+                    "id": 1001,
+                    "name": "Web Application Security Assessment",
+                    "description": "Comprehensive web application testing methodology covering OWASP Top 10 vulnerabilities",
+                    "commands": [
+                        "nmap -sS -sV -sC -O {{target}}",
+                        "subfinder -d {{target}}",
+                        "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
+                        "nikto -h http://{{target}}",
+                        "sqlmap -u 'http://{{target}}/login' --forms --batch",
+                        "xsstrike -u 'http://{{target}}' --crawl",
+                        "testssl.sh {{target}}:443",
+                        "ffuf -u http://{{target}}/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+                    ],
+                    "steps": [
+                        {
+                            "id": "step-web-1",
+                            "type": "manual",
+                            "content": "INFORMATION GATHERING: Identify application structure, technologies, and entry points",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-2",
+                            "type": "command",
+                            "content": "nmap -sS -sV -sC -O {{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-3",
+                            "type": "command",
+                            "content": "subfinder -d {{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-4",
+                            "type": "command",
+                            "content": "gobuster dir -u http://{{target}} -w /usr/share/wordlists/dirb/common.txt",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-5",
+                            "type": "manual",
+                            "content": "CONFIGURATION MANAGEMENT: Review server configuration and security headers",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-6",
+                            "type": "command",
+                            "content": "nikto -h http://{{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-7",
+                            "type": "command",
+                            "content": "testssl.sh {{target}}:443",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-8",
+                            "type": "manual",
+                            "content": "AUTHENTICATION TESTING: Test login mechanisms and session management",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-9",
+                            "type": "command",
+                            "content": "sqlmap -u 'http://{{target}}/login' --forms --batch",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-10",
+                            "type": "manual",
+                            "content": "INPUT VALIDATION: Test for XSS, SQLi, and other injection vulnerabilities",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-web-11",
+                            "type": "command",
+                            "content": "xsstrike -u 'http://{{target}}' --crawl",
+                            "requiresUpload": False,
+                            "completed": False
+                        }
+                    ]
+                },
+                "author": "Web Security Specialist",
+                "tags": ["web", "owasp", "xss", "sqli", "authentication"],
+                "likes": 32,
+                "downloads": 24,
+                "comments": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "author": "WebDevSec",
+                        "content": "Great coverage of OWASP Top 10. The SQL injection and XSS testing steps are particularly thorough.",
+                        "rating": 5,
+                        "created_at": time.time() - 432000
+                    }
+                ],
+                "created_at": time.time() - 1728000,  # 20 days ago
+                "updated_at": time.time() - 259200,
+                "is_public": True,
+                "views": 89
             },
             {
                 "id": str(uuid.uuid4()),
                 "title": "Quick Network Security Scan",
-                "description": "Rapid network assessment for time-constrained engagements. Perfect for initial reconnaissance.",
+                "description": "Rapid network assessment for time-constrained engagements. Perfect for initial reconnaissance and quick security checks.",
                 "methodology_data": {
                     "id": 1002,
-                    "name": "Quick Network Scan",
-                    "description": "Rapid network security assessment",
+                    "name": "Quick Network Security Scan",
+                    "description": "Rapid network assessment for initial reconnaissance",
                     "commands": [
                         "nmap -sS -sV --top-ports 1000 {{target}}",
-                        "masscan -p1-1000 {{targetIP}} --rate=1000"
+                        "masscan -p1-1000 {{targetIP}} --rate=1000",
+                        "nmap --script vuln {{target}}"
                     ],
                     "steps": [
                         {
-                            "id": "quick_scan",
+                            "id": "step-quick-1",
+                            "type": "manual",
+                            "content": "SCOPE DEFINITION: Define target range and scan parameters",
+                            "requiresUpload": True,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-quick-2",
                             "type": "command",
-                            "title": "Quick Port Scan",
-                            "description": "Rapid port discovery",
-                            "command": "nmap -sS -sV --top-ports 1000 {{target}}",
-                            "requires_upload": False
+                            "content": "nmap -sS -sV --top-ports 1000 {{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-quick-3",
+                            "type": "command",
+                            "content": "masscan -p1-1000 {{targetIP}} --rate=1000",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-quick-4",
+                            "type": "command",
+                            "content": "nmap --script vuln {{target}}",
+                            "requiresUpload": False,
+                            "completed": False
+                        },
+                        {
+                            "id": "step-quick-5",
+                            "type": "manual",
+                            "content": "RESULTS ANALYSIS: Review open ports and identified vulnerabilities",
+                            "requiresUpload": True,
+                            "completed": False
                         }
                     ]
                 },
-                "author": "Network Specialist",
-                "tags": ["network", "quick", "reconnaissance", "nmap"],
-                "likes": 8,
-                "downloads": 12,
-                "comments": [],
-                "created_at": time.time() - 1728000,  # 20 days ago
-                "updated_at": time.time() - 172800,
+                "author": "Network Security Analyst",
+                "tags": ["network", "quick", "reconnaissance", "nmap", "masscan"],
+                "likes": 18,
+                "downloads": 42,
+                "comments": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "author": "NetworkAdmin",
+                        "content": "Perfect for quick security audits. Saves a lot of time compared to full comprehensive scans.",
+                        "rating": 4,
+                        "created_at": time.time() - 604800
+                    }
+                ],
+                "created_at": time.time() - 1209600,  # 14 days ago
+                "updated_at": time.time() - 345600,
                 "is_public": True,
-                "views": 28
+                "views": 67
             }
         ]
 
@@ -2915,6 +3209,71 @@ def get_fallback_explanation_default(command: str) -> CommandExplanation:
         alternatives=[],
         best_practices=["Use in authorized environments only", "Follow responsible disclosure practices"]
     )
+# import 
+
+
+@app.post("/api/import-methodology")
+async def import_methodology(file: UploadFile = File(...)):
+    """Import methodology from JSON file"""
+    try:
+        print(f"📥 Importing methodology from file: {file.filename}")
+        
+        # Read and parse the file content
+        content = await file.read()
+        try:
+            imported_data = json.loads(content.decode('utf-8'))
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON file: {str(e)}")
+        
+        # Validate the imported data structure
+        if not imported_data.get('methodology'):
+            raise HTTPException(status_code=400, detail="Invalid methodology file: missing 'methodology' field")
+        
+        methodology_data = imported_data['methodology']
+        
+        # Validate required fields
+        if not methodology_data.get('name'):
+            raise HTTPException(status_code=400, detail="Methodology name is required")
+        
+        # Generate a new ID to avoid conflicts
+        new_id = next_id(db["methodologies"])
+        methodology_data['id'] = new_id
+        
+        # Ensure steps have proper IDs if they don't exist
+        if methodology_data.get('steps'):
+            for step in methodology_data['steps']:
+                if not step.get('id'):
+                    step['id'] = f"step-{new_id}-{uuid.uuid4().hex[:8]}"
+                # Ensure completed field exists
+                if 'completed' not in step:
+                    step['completed'] = False
+        
+        # Ensure commands field exists
+        if not methodology_data.get('commands') and methodology_data.get('steps'):
+            methodology_data['commands'] = [
+                step['content'] for step in methodology_data['steps'] 
+                if step.get('type') == 'command'
+            ]
+        
+        # Add to database
+        db["methodologies"].append(methodology_data)
+        save_db(db)
+        
+        print(f"✅ Successfully imported methodology: {methodology_data['name']} (ID: {new_id})")
+        
+        return {
+            "ok": True,
+            "methodology": methodology_data,
+            "message": f"Methodology '{methodology_data['name']}' imported successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error importing methodology: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to import methodology: {str(e)}")
+
+
 # ============================
 # Health Check Endpoint
 # ============================
@@ -2951,4 +3310,5 @@ def root():
         "service": "Pentest Orchestration API",
         "shared_methodologies_count": len(methodologies_db)
     }
+
 
