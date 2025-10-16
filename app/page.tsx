@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown, Brain, Home, Activity, Users, Rocket, Star, ArrowRight } from "lucide-react"
+import { Plus, Shield, Trash2, Menu, Terminal, FileText, GripVertical, Download, Globe, Edit, FolderOpen, ChevronDown, Upload, X, Save, ArrowUp, ArrowDown, Brain, Home, Activity, Users, Rocket, Star, ArrowRight, Target, EyeOff, Eye } from "lucide-react"
 
 import { ManualStepModal } from "./components/ManualStepModal"
 import { ProjectSelector } from "./components/ProjectSelector"
@@ -29,6 +29,10 @@ import {
 } from "@/lib/ai-command-suggestions"
 import { Lightbulb, HelpCircle, Sparkles, Bot, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+
+
+
+
 interface MethodologyStep {
   id: string
   type: "command" | "manual"
@@ -57,6 +61,15 @@ interface Project {
   status: "active" | "completed"
 }
 
+interface CommandExplanation {
+  command: string;
+  explanation: string;
+  purpose: string;
+  risks: string[];
+  alternatives: string[];
+  best_practices: string[];
+}
+
 const apiBase = "http://127.0.0.1:5000"
 
 async function fetchJSON(url: string, options?: RequestInit) {
@@ -72,6 +85,23 @@ async function fetchJSON(url: string, options?: RequestInit) {
     throw e
   }
 }
+
+function isImageFile(filename: string): boolean {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+  return imageExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+}
+
+function isTextFile(filename: string): boolean {
+  const textExtensions = ['.txt', '.log', '.md', '.json', '.xml', '.csv', '.conf', '.config'];
+  return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+}
+
+function getFileType(filename: string): string {
+  if (isImageFile(filename)) return 'image';
+  if (isTextFile(filename)) return 'text';
+  return 'file';
+}
+
 
 export default function PentestMethodologies() {
   const shouldStopRef = useRef(false);
@@ -143,6 +173,20 @@ export default function PentestMethodologies() {
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
 
   const [isImporting, setIsImporting] = useState(false);
+
+  const [showManualEvidence, setShowManualEvidence] = useState(true);
+
+  const [pentestGoal, setPentestGoal] = useState("");
+  const [isGeneratingGoalCommands, setIsGeneratingGoalCommands] = useState(false);
+
+  const [showEvidencePreviews, setShowEvidencePreviews] = useState(true);
+
+
+  const [methodologyStepExplanations, setMethodologyStepExplanations] = useState<{
+    [stepId: string]: CommandExplanation;
+  }>({});
+
+  const [explainingStepId, setExplainingStepId] = useState<string | null>(null);
 
   useEffect(() => {
     loadMethodologies()
@@ -745,23 +789,60 @@ export default function PentestMethodologies() {
 
   // Command Explanation Function
   async function explainSelectedCommand(command: string) {
-    if (!currentProject || !selectedMethodology) return;
+    if (!currentProject || !selectedMethodology) {
+      console.error("No project or methodology selected");
+      return;
+    }
 
     setExplainingCommand(command);
     setCommandExplanation(null);
 
     try {
       console.log("🤖 Explaining command:", command);
-      const explanation = await explainCommand(command, {
-        target: currentProject.target,
-        methodology: selectedMethodology.name,
+
+      const requestBody = {
+        command: command,
+        context: {
+          target: currentProject.target,
+          methodology: selectedMethodology.name
+        },
         use_online: aiProvider === "online",
         provider: onlineProvider
+      };
+
+      console.log("📤 Sending explanation request:", requestBody);
+
+      const response = await fetch(`${apiBase}/api/ai-explain-command`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+
+      const explanation: CommandExplanation = await response.json();
+      console.log("✅ Command explanation received:", explanation);
       setCommandExplanation(explanation);
+
     } catch (error) {
-      console.error("Failed to explain command:", error);
+      console.error("❌ Failed to explain command:", error);
+
+      // Fallback explanation
+      setCommandExplanation({
+        command: command,
+        explanation: `Unable to get AI explanation: ${error.message}. Please check your connection and backend server.`,
+        purpose: "Command purpose not available",
+        risks: ["Unable to assess risks"],
+        alternatives: [],
+        best_practices: ["Check your internet connection", "Verify API keys are configured", "Ensure backend server is running"]
+      });
     } finally {
+      // Only reset the loading state, NOT the explanation
       setExplainingCommand(null);
     }
   }
@@ -1002,6 +1083,218 @@ export default function PentestMethodologies() {
     );
   };
 
+  async function generateGoalBasedCommands() {
+    if (!pentestGoal.trim() || !currentProject || !selectedMethodology) {
+      alert("Please describe your goal and select a project/methodology");
+      return;
+    }
+
+    setIsGeneratingGoalCommands(true);
+
+    try {
+      // Enhanced AI prompt for goal-based command generation
+      const enhancedPrompt = `
+I am conducting a penetration test with the following context:
+- Current Methodology: ${selectedMethodology.name}
+- Target: ${currentProject.target}
+- My Specific Goal: ${pentestGoal}
+
+Based on my goal, please suggest 3-5 specific penetration testing commands that would help me achieve this.
+Consider the current methodology phase and provide commands that are appropriate.
+
+For each command, provide:
+1. The exact command string (use {{target}} for the target variable)
+2. Brief description of how it helps achieve my goal
+3. Category
+4. Risk level
+5. Any prerequisites
+6. Expected output relevant to my goal
+
+Focus on commands that directly address: "${pentestGoal}"
+`;
+
+      // Use your existing AI suggestion infrastructure
+      const request = {
+        current_methodology: {
+          name: selectedMethodology.name,
+          description: selectedMethodology.description,
+          steps: selectedMethodology.steps || []
+        },
+        project_target: currentProject.target,
+        completed_steps: selectedMethodology.steps
+          ?.filter(step => step.completed)
+          .map(step => step.content) || [],
+        custom_prompt: enhancedPrompt, // Add custom prompt for goal-based generation
+        use_online: aiProvider === "online",
+        provider: onlineProvider
+      };
+
+      const suggestions = await getCommandSuggestions(request);
+      setAiSuggestions(suggestions);
+      setShowSuggestions(true);
+
+    } catch (error) {
+      console.error("Failed to generate goal-based commands:", error);
+      alert("Failed to generate commands for your goal");
+    } finally {
+      setIsGeneratingGoalCommands(false);
+    }
+  }
+
+  async function explainMethodologyStep(stepId: string, command: string) {
+    if (!currentProject || !selectedMethodology) {
+      console.error("No project or methodology selected");
+      return;
+    }
+
+    setExplainingStepId(stepId);
+
+    try {
+      console.log("🤖 Explaining methodology step:", command);
+
+      const requestBody = {
+        command: command,
+        context: {
+          target: currentProject.target,
+          methodology: selectedMethodology.name
+        },
+        use_online: aiProvider === "online",
+        provider: onlineProvider
+      };
+
+      console.log("📤 Sending methodology step explanation request:", requestBody);
+
+      const response = await fetch(`${apiBase}/api/ai-explain-command`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+
+      const explanation: CommandExplanation = await response.json();
+      console.log("✅ Methodology step explanation received:", explanation);
+
+      // Store explanation by step ID
+      setMethodologyStepExplanations(prev => ({
+        ...prev,
+        [stepId]: explanation
+      }));
+
+    } catch (error) {
+      console.error("❌ Failed to explain methodology step:", error);
+
+      // Fallback explanation
+      setMethodologyStepExplanations(prev => ({
+        ...prev,
+        [stepId]: {
+          command: command,
+          explanation: `Unable to get AI explanation: ${error.message}`,
+          purpose: "Command purpose not available",
+          risks: ["Unable to assess risks"],
+          alternatives: [],
+          best_practices: ["Check your connection and try again"]
+        }
+      }));
+    } finally {
+      setExplainingStepId(null);
+    }
+  }
+
+
+  const CommandExplanationPreview = ({ explanation }: { explanation: CommandExplanation }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+      <div className="space-y-2">
+        {/* Compact header with toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="h-3 w-3 text-blue-500" />
+            <span className="font-medium text-blue-700 text-sm">AI Explanation</span>
+          </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-blue-500 hover:text-blue-700 text-xs font-medium flex items-center gap-1 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronDown className="h-3 w-3 rotate-180" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3" />
+                Expand
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Always show purpose and short explanation */}
+        <div className="text-blue-600 text-sm">
+          <p className="font-medium">{explanation.purpose}</p>
+          {!isExpanded && (
+            <p className="mt-1 line-clamp-2">
+              {explanation.explanation.length > 100
+                ? explanation.explanation.substring(0, 100) + '...'
+                : explanation.explanation
+              }
+            </p>
+          )}
+        </div>
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="space-y-3 pt-2 border-t border-blue-200">
+            <div>
+              <span className="font-medium text-blue-700 text-sm">Full Explanation:</span>
+              <p className="text-blue-600 text-sm mt-1">{explanation.explanation}</p>
+            </div>
+
+            {explanation.risks && explanation.risks.length > 0 && (
+              <div>
+                <span className="font-medium text-red-600 text-sm">Risks:</span>
+                <ul className="list-disc list-inside text-red-600 text-sm mt-1 space-y-1">
+                  {explanation.risks.map((risk, i) => (
+                    <li key={i}>{risk}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {explanation.alternatives && explanation.alternatives.length > 0 && (
+              <div>
+                <span className="font-medium text-green-600 text-sm">Alternatives:</span>
+                <ul className="list-disc list-inside text-green-600 text-sm mt-1 space-y-1">
+                  {explanation.alternatives.map((alternative, i) => (
+                    <li key={i}>{alternative}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {explanation.best_practices && explanation.best_practices.length > 0 && (
+              <div>
+                <span className="font-medium text-purple-600 text-sm">Best Practices:</span>
+                <ul className="list-disc list-inside text-purple-600 text-sm mt-1 space-y-1">
+                  {explanation.best_practices.map((practice, i) => (
+                    <li key={i}>{practice}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
 
 
@@ -1014,9 +1307,9 @@ export default function PentestMethodologies() {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-6 w-6 text-gray-800" />
-              <h2 className="text-xl font-bold text-gray-800">PentestFlow</h2>
+              <h2 className="text-xl font-bold text-gray-900">PentestFlow</h2>
             </div>
-            <p className="text-sm text-gray-600">Professional penetration testing orchestrator</p>
+            <p className="text-sm text-gray-700">Professional penetration testing orchestrator</p>
           </div>
 
 
@@ -1086,7 +1379,7 @@ export default function PentestMethodologies() {
                   <Button
                     onClick={() => setIsAddDialogOpen(true)}
                     size="sm"
-                    className="bg-gray-600 hover:bg-gray-700 text-white h-8 w-8 p-0"
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 w-8 p-0"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -1112,13 +1405,13 @@ export default function PentestMethodologies() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <Shield className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                            <h3 className="text-sm font-semibold truncate text-gray-800">{methodology.name}</h3>
+                            <h3 className="text-sm font-semibold truncate text-gray-900">{methodology.name}</h3>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); deleteMethodology(methodology.id) }}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -1194,7 +1487,7 @@ export default function PentestMethodologies() {
                     setIsAddDialogOpen(false);
                   }}
                   disabled={!newMethodologyName.trim()}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Plus className="h-3 w-3 mr-2" />
                   Add Methodology
@@ -1241,8 +1534,8 @@ export default function PentestMethodologies() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                        <p className="text-3xl font-bold text-gray-800">{getHomeStats().totalProjects}</p>
+                        <p className="text-sm font-medium text-gray-700">Total Projects</p>
+                        <p className="text-3xl font-bold text-gray-900">{getHomeStats().totalProjects}</p>
                       </div>
                       <div className="p-3 bg-blue-100 rounded-full">
                         <FolderOpen className="h-6 w-6 text-blue-600" />
@@ -1317,7 +1610,7 @@ export default function PentestMethodologies() {
                         <p className="text-gray-600">No active project</p>
                         <Button
                           onClick={() => setShowProjectSelector(true)}
-                          className="bg-gray-800 hover:bg-gray-900 text-white"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           Select or Create Project
                         </Button>
@@ -1337,7 +1630,7 @@ export default function PentestMethodologies() {
                         <div className="grid grid-cols-2 gap-3">
                           <Button
                             onClick={() => setActiveSection("methodologies")}
-                            className="bg-gray-800 hover:bg-gray-900 text-white"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             <Shield className="h-4 w-4 mr-2" />
                             Methodologies
@@ -1781,7 +2074,7 @@ export default function PentestMethodologies() {
                             onClick={addStepToMethodology}
                             disabled={!newStepContent.trim()}
                             size="sm"
-                            className="bg-cyan-600 hover:bg-cyan-700"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             Add Step
                           </Button>
@@ -1796,6 +2089,26 @@ export default function PentestMethodologies() {
                             >
                               {executionState.isRunning ? "Running..." : "Run All Steps"}
                             </Button>
+
+                            <Button
+                              onClick={() => setShowEvidencePreviews(!showEvidencePreviews)}
+                              variant="outline"
+                              className="bg-purple-600 hover:bg-white-700 text-white border-purple-600"
+                            >
+                              {showEvidencePreviews ? (
+                                <>
+                                  <EyeOff className="h-4 w-4 mr-2" />
+                                  Manual Previews
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Manual Previews
+                                </>
+                              )}
+                            </Button>
+
+
                             {executionState.isRunning && (
                               <Button
                                 onClick={stopExecution}
@@ -1808,154 +2121,362 @@ export default function PentestMethodologies() {
                           </div>
                         )}
                       </div>
-
                       {selectedMethodology.steps?.map((step, index) => (
-                        <div
-                          key={step.id}
-                          className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''}`}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, step.id)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, step.id)}
-                        >
-                          <div className="cursor-move text-gray-400 hover:text-gray-600">
-                            <GripVertical className="h-4 w-4" />
-                          </div>
-
-                          <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-500' : 'bg-gray-300'}`} />
-
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                                }`}>
-                                {step.type}
-                              </span>
-
-                              {editingStepId === step.id ? (
-                                <div className="flex-1 flex gap-2">
-                                  <Input
-                                    value={editingStepContent}
-                                    onChange={(e) => setEditingStepContent(e.target.value)}
-                                    className="font-mono text-sm flex-1"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') saveEditStep()
-                                      if (e.key === 'Escape') cancelEditStep()
-                                    }}
-                                  />
-                                  <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
-                                    <Save className="h-3 w-3" />
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={cancelEditStep}>
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div
-                                  className={`flex-1 cursor-pointer ${step.type === 'manual' ? 'hover:bg-gray-100 rounded px-2 py-1' : ''}`}
-                                  onClick={() => {
-                                    if (step.type === 'manual') {
-                                      setManualStepModal({ open: true, step })
-                                    }
-                                  }}
-                                >
-                                  <code className="text-sm font-mono">{step.content}</code>
-                                </div>
-                              )}
+                        <div key={step.id} className="space-y-3">
+                          {/* Step Card */}
+                          <div
+                            className={`flex items-center gap-2 p-3 bg-gray-50 rounded-lg border transition-colors ${draggedStepId === step.id ? 'bg-blue-50 border-blue-300' : ''}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, step.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, step.id)}
+                          >
+                            <div className="cursor-move text-gray-400 hover:text-gray-600">
+                              <GripVertical className="h-4 w-4" />
                             </div>
-                            {step.evidence && step.evidence.length > 0 && (
-                              <div className="text-xs text-gray-600">
-                                Evidence: {step.evidence.length} file(s) uploaded
-                              </div>
-                            )}
-                            {step.completed && (
-                              <div className="text-xs text-green-600 flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                Completed
-                              </div>
-                            )}
-                          </div>
 
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveStep(step.id, 'up')}
-                              disabled={index === 0}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ArrowUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveStep(step.id, 'down')}
-                              disabled={index === selectedMethodology.steps.length - 1}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ArrowDown className="h-3 w-3" />
-                            </Button>
+                            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-green-600' : 'bg-gray-400'}`} />
 
-                            {editingStepId !== step.id && (
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs px-2 py-1 rounded ${step.type === 'command'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
+                                  }`}>
+                                  {step.type}
+                                </span>
+
+                                {editingStepId === step.id ? (
+                                  <div className="flex-1 flex gap-2">
+                                    <Input
+                                      value={editingStepContent}
+                                      onChange={(e) => setEditingStepContent(e.target.value)}
+                                      className="font-mono text-sm flex-1"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') saveEditStep()
+                                        if (e.key === 'Escape') cancelEditStep()
+                                      }}
+                                    />
+                                    <Button size="sm" onClick={saveEditStep} className="bg-green-600 hover:bg-green-700">
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEditStep}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1">
+                                    <div
+                                      className={`cursor-pointer ${step.type === 'manual' ? 'hover:bg-gray-100 rounded px-2 py-1' : ''}`}
+                                      onClick={() => {
+                                        if (step.type === 'manual') {
+                                          setManualStepModal({ open: true, step })
+                                        }
+                                      }}
+                                    >
+                                      <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded border">{step.content}</code>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Step Metadata */}
+                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
+                                {step.evidence && step.evidence.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <FileText className="h-3 w-3" />
+                                    {step.evidence.length} evidence file(s)
+                                  </span>
+                                )}
+                                {step.completed && (
+                                  <span className="flex items-center gap-1 text-green-600">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Completed
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Step Actions */}
+                            <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => startEditStep(step.id, step.content)}
+                                onClick={() => moveStep(step.id, 'up')}
+                                disabled={index === 0}
                                 className="h-8 w-8 p-0"
                               >
-                                <Edit className="h-3 w-3" />
+                                <ArrowUp className="h-3 w-3" />
                               </Button>
-                            )}
-
-                            {step.type === "command" && editingStepId !== step.id && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => runCommand(step.content)}
-                                  className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
-                                >
-                                  Run
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => explainSelectedCommand(step.content)}
-                                  disabled={explainingCommand === step.content}
-                                  className="flex-shrink-0 h-8"
-                                >
-                                  {explainingCommand === step.content ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
-                                  ) : (
-                                    <HelpCircle className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </>
-                            )}
-
-                            {/* Manual Step Actions */}
-                            {step.type === "manual" && editingStepId !== step.id && (
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                onClick={() => setManualStepModal({ open: true, step })}
-                                className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8"
+                                onClick={() => moveStep(step.id, 'down')}
+                                disabled={index === selectedMethodology.steps.length - 1}
+                                className="h-8 w-8 p-0"
                               >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Open
+                                <ArrowDown className="h-3 w-3" />
                               </Button>
-                            )}
 
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteStep(step.id)}
-                              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                              {editingStepId !== step.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEditStep(step.id, step.content)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              )}
+
+                              {step.type === "command" && editingStepId !== step.id && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => runCommand(step.content)}
+                                    className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8 px-3"
+                                  >
+                                    Run
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => explainMethodologyStep(step.id, step.content)}
+                                    disabled={explainingStepId === step.id}
+                                    className="flex-shrink-0 h-8 px-3"
+                                  >
+                                    {explainingStepId === step.id ? (
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600" />
+                                    ) : (
+                                      <>
+                                        <HelpCircle className="h-3 w-3 mr-1" />
+                                        Explain
+                                      </>
+                                    )}
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Manual Step Actions */}
+                              {step.type === "manual" && editingStepId !== step.id && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setManualStepModal({ open: true, step })}
+                                  className="flex-shrink-0 bg-black hover:bg-green-600 text-white h-8 px-3"
+                                >
+                                  <Upload className="h-3 w-3 mr-1" />
+                                  Open
+                                </Button>
+                              )}
+
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteStep(step.id)}
+                                className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
+
+                          {/* Evidence Previews */}
+                          {step.evidence && step.evidence.length > 0 && showEvidencePreviews && (
+                            <div className="ml-8 p-4 bg-gray-50 rounded-lg border">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+                                  <FileText className="h-4 w-4" />
+                                  Evidence Files ({step.evidence.length})
+                                </h4>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowEvidencePreviews(!showEvidencePreviews)}
+                                  className="h-6 text-xs"
+                                >
+                                  <EyeOff className="h-3 w-3 mr-1" />
+                                  Hide
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {step.evidence.map((evidenceItem, evidenceIndex) => {
+                                  const evidence = typeof evidenceItem === 'string'
+                                    ? { id: evidenceIndex, filename: evidenceItem, description: 'Uploaded evidence' }
+                                    : evidenceItem;
+
+                                  return (
+                                    <div key={evidenceIndex} className="border rounded-lg overflow-hidden bg-white">
+                                      {isImageFile(evidence.filename) ? (
+                                        <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden relative">
+                                          <img
+                                            src={`${apiBase}/api/evidence-file/${evidence.id || evidenceIndex}`}
+                                            alt={evidence.description || evidence.filename}
+                                            className="w-full h-full object-contain max-h-64"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                              const fallback = e.currentTarget.parentElement?.querySelector('.image-fallback');
+                                              if (fallback) fallback.classList.remove('hidden');
+                                            }}
+                                          />
+                                          <div className="hidden image-fallback absolute inset-0 flex-col items-center justify-center bg-gray-50 p-4">
+                                            <FileText className="h-8 w-8 text-gray-400 mb-2" />
+                                            <span className="text-sm text-gray-500 text-center break-all">
+                                              {evidence.filename}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : isTextFile(evidence.filename) ? (
+                                        <div className="bg-gray-900 text-green-400 p-4 max-h-48 overflow-y-auto">
+                                          <TextFilePreview
+                                            filePath={evidence.saved_path || evidence.filename}
+                                            filename={evidence.filename}
+                                            apiBase={apiBase}
+                                            evidenceId={evidence.id || evidenceIndex}
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="aspect-video bg-gray-50 flex flex-col items-center justify-center p-4">
+                                          <FileText className="h-8 w-8 text-gray-400 mb-2" />
+                                          <span className="text-sm text-gray-600 text-center break-all">
+                                            {evidence.filename}
+                                          </span>
+                                          <Badge variant="outline" className="mt-2 bg-gray-200">
+                                            {evidence.type || getFileType(evidence.filename)}
+                                          </Badge>
+                                        </div>
+                                      )}
+
+                                      <div className="p-3 border-t">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-medium text-gray-700">{evidence.filename}</span>
+                                          <Badge variant="outline" className="text-xs">
+                                            {evidence.type || getFileType(evidence.filename)}
+                                          </Badge>
+                                        </div>
+                                        {evidence.description && evidence.description !== 'Uploaded evidence' && (
+                                          <p className="text-xs text-gray-500 mt-1">{evidence.description}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Command Explanation */}
+                          {methodologyStepExplanations[step.id] && (
+                            <div className="ml-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-sm text-blue-800 flex items-center gap-2">
+                                  <Bot className="h-4 w-4" />
+                                  AI Command Explanation
+                                </h4>
+                                <button
+                                  onClick={() => {
+                                    setMethodologyStepExplanations(prev => {
+                                      const newExplanations = { ...prev };
+                                      delete newExplanations[step.id];
+                                      return newExplanations;
+                                    });
+                                  }}
+                                  className="text-blue-400 hover:text-blue-600 transition-colors"
+                                  title="Close explanation"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+
+                              <div className="space-y-3 text-sm">
+                                <div>
+                                  <span className="font-medium text-blue-700">Purpose:</span>
+                                  <p className="text-blue-600 mt-1">{methodologyStepExplanations[step.id].purpose}</p>
+                                </div>
+
+                                <div>
+                                  <span className="font-medium text-blue-700">Explanation:</span>
+                                  <p className="text-blue-600 mt-1">{methodologyStepExplanations[step.id].explanation}</p>
+                                </div>
+
+                                {methodologyStepExplanations[step.id].risks && methodologyStepExplanations[step.id].risks.length > 0 && (
+                                  <div>
+                                    <span className="font-medium text-red-600">Risks:</span>
+                                    <ul className="list-disc list-inside text-red-600 mt-1 space-y-1">
+                                      {methodologyStepExplanations[step.id].risks.map((risk, i) => (
+                                        <li key={i}>{risk}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {methodologyStepExplanations[step.id].alternatives && methodologyStepExplanations[step.id].alternatives.length > 0 && (
+                                  <div>
+                                    <span className="font-medium text-green-600">Alternatives:</span>
+                                    <ul className="list-disc list-inside text-green-600 mt-1 space-y-1">
+                                      {methodologyStepExplanations[step.id].alternatives.map((alternative, i) => (
+                                        <li key={i}>{alternative}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {methodologyStepExplanations[step.id].best_practices && methodologyStepExplanations[step.id].best_practices.length > 0 && (
+                                  <div>
+                                    <span className="font-medium text-purple-600">Best Practices:</span>
+                                    <ul className="list-disc list-inside text-purple-600 mt-1 space-y-1">
+                                      {methodologyStepExplanations[step.id].best_practices.map((practice, i) => (
+                                        <li key={i}>{practice}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-lg border-2 border-orange-200/80 backdrop-blur-sm bg-white/95">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-orange-600" />
+                        Goal-Based Command Generation
+                      </CardTitle>
+                      <CardDescription>
+                        Describe what you want to find, and AI will generate appropriate commands
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="pentest-goal">What do you want to find?</Label>
+                        <Textarea
+                          id="pentest-goal"
+                          placeholder="e.g., Find SQL injection vulnerabilities, Discover open ports, Enumerate subdomains, Test for XSS vulnerabilities..."
+                          value={pentestGoal}
+                          onChange={(e) => setPentestGoal(e.target.value)}
+                          className="min-h-[80px]"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={generateGoalBasedCommands}
+                        disabled={!pentestGoal.trim() || isGeneratingGoalCommands}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isGeneratingGoalCommands ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Generating Commands...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Generate Commands for This Goal
+                          </>
+                        )}
+                      </Button>
                     </CardContent>
                   </Card>
 
@@ -2045,16 +2566,16 @@ export default function PentestMethodologies() {
                                       </code>
                                       <Badge
                                         className={`
-                                    ${suggestion.risk_level === 'high' ? 'bg-red-100 text-red-800' :
-                                            suggestion.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                              'bg-green-100 text-green-800'}
+                                    ${suggestion.risk_level === 'high' ? 'bg-red-50 text-red-900 border border-red-200' :
+                                            suggestion.risk_level === 'medium' ? 'bg-yellow-50 text-yellow-900 border border-yellow-200' :
+                                              'bg-green-50 text-green-900 border border-green-200'}
                                   `}
                                       >
                                         {suggestion.risk_level.toUpperCase()} RISK
                                       </Badge>
                                     </div>
 
-                                    <p className="text-sm text-gray-700 mb-2">{suggestion.description}</p>
+                                    <p className="text-sm text-gray-800 mb-2">{suggestion.description}</p>
 
                                     <div className="flex items-center gap-4 text-xs text-gray-600">
                                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -2102,28 +2623,28 @@ export default function PentestMethodologies() {
                                   </Button>
                                 </div>
 
-                                {commandExplanation && explainingCommand === suggestion.command && (
-                                  <div className="mt-3 p-3 bg-white border rounded-lg">
-                                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                {commandExplanation && commandExplanation.command === suggestion.command && (
+                                  <div className="mt-3 p-3 bg-white border rounded-lg animate-fade-in">
+                                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                                       <Bot className="h-4 w-4 text-blue-600" />
                                       AI Explanation
                                     </h4>
 
-                                    <div className="space-y-2 text-sm">
+                                    <div className="space-y-3 text-sm">
                                       <div>
-                                        <span className="font-medium">Purpose:</span>
-                                        <p className="text-gray-700">{commandExplanation.purpose}</p>
+                                        <span className="font-medium text-gray-900">Purpose:</span>
+                                        <p className="text-gray-700 mt-1">{commandExplanation.purpose}</p>
                                       </div>
 
                                       <div>
-                                        <span className="font-medium">Explanation:</span>
-                                        <p className="text-gray-700">{commandExplanation.explanation}</p>
+                                        <span className="font-medium text-gray-900">Explanation:</span>
+                                        <p className="text-gray-700 mt-1">{commandExplanation.explanation}</p>
                                       </div>
 
-                                      {commandExplanation.risks.length > 0 && (
+                                      {commandExplanation.risks && commandExplanation.risks.length > 0 && (
                                         <div>
                                           <span className="font-medium text-red-600">Risks:</span>
-                                          <ul className="list-disc list-inside text-gray-700">
+                                          <ul className="list-disc list-inside text-gray-700 mt-1 space-y-1">
                                             {commandExplanation.risks.map((risk, i) => (
                                               <li key={i}>{risk}</li>
                                             ))}
@@ -2131,10 +2652,21 @@ export default function PentestMethodologies() {
                                         </div>
                                       )}
 
-                                      {commandExplanation.best_practices.length > 0 && (
+                                      {commandExplanation.alternatives && commandExplanation.alternatives.length > 0 && (
+                                        <div>
+                                          <span className="font-medium text-blue-600">Alternatives:</span>
+                                          <ul className="list-disc list-inside text-gray-700 mt-1 space-y-1">
+                                            {commandExplanation.alternatives.map((alternative, i) => (
+                                              <li key={i}>{alternative}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+
+                                      {commandExplanation.best_practices && commandExplanation.best_practices.length > 0 && (
                                         <div>
                                           <span className="font-medium text-green-600">Best Practices:</span>
-                                          <ul className="list-disc list-inside text-gray-700">
+                                          <ul className="list-disc list-inside text-gray-700 mt-1 space-y-1">
                                             {commandExplanation.best_practices.map((practice, i) => (
                                               <li key={i}>{practice}</li>
                                             ))}
@@ -2172,7 +2704,7 @@ export default function PentestMethodologies() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto border border-cyan-500/30">
+                      <div className="bg-gray-900 text-green-200 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto border border-cyan-500/30">
                         {terminalOutput.length > 0 ? (
                           terminalOutput.map((result, idx) => (
                             <div key={idx} className="mb-3 border-b border-gray-700 pb-2 last:border-b-0">
@@ -2180,7 +2712,7 @@ export default function PentestMethodologies() {
                                 <span className={`w-2 h-2 rounded-full ${result.status === "success" ? "bg-green-400" :
                                   result.status === "failed" ? "bg-red-400" : "bg-yellow-400"
                                   }`} />
-                                <span className="text-cyan-400">{result.command}</span>
+                                <span className="text-cyan-300">{result.command}</span>
                                 <span className="ml-auto text-xs text-gray-400 animate-pulse">
                                   {result.status === "success" ? "Success" :
                                     result.status === "failed" ? "Failed" : "Running"}
@@ -2220,7 +2752,7 @@ export default function PentestMethodologies() {
 
                   <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2 text-gray-800">
+                      <CardTitle className="text-sm flex items-center gap-2 text-gray-900">
                         <Plus className="h-4 w-4" />Add New Methodology
                       </CardTitle>
                     </CardHeader>
@@ -2247,7 +2779,7 @@ export default function PentestMethodologies() {
                         onClick={addMethodology}
                         disabled={!newMethodologyName.trim()}
                         size="sm"
-                        className="w-full bg-gray-600 hover:bg-gray-700 text-white"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         <Plus className="h-3 w-3 mr-2" />
                         Add Methodology
@@ -2299,10 +2831,7 @@ export default function PentestMethodologies() {
         onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
         title={successModal.title}
         message={successModal.message}
-        onAction={() => {
-          // The methodology is already selected, just close the modal
-          setSuccessModal({ isOpen: false, title: '', message: '' });
-        }}
+
       />
     </div>
 

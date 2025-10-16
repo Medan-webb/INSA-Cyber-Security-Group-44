@@ -886,7 +886,7 @@ export default function SharePage() {
                 <button
                   type="submit"
                   disabled={sharing}
-                  className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 focus:outline-none focus:ring-4 focus:ring-green-500/20 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none font-semibold shadow-lg shadow-green-500/25"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-400 text-white rounded-xl hover:from-blue-700 hover:to-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none font-semibold shadow-lg shadow-green-500/25"
                 >
                   {sharing ? (
                     <span className="flex items-center gap-2">

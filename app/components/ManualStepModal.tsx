@@ -362,7 +362,7 @@ export function ManualStepModal({
               <div className="flex gap-2">
                 <Button
                   onClick={completeStep}
-                  className="bg-green-600 hover:bg-green-700 flex-1"
+                  className="bg-green-700 hover:bg-green-800 flex-1 text-white"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark Step as Completed
@@ -370,7 +370,7 @@ export function ManualStepModal({
                 <Button
                   variant="outline"
                   onClick={onClose}
-                  className="border-green-300 text-green-700 hover:bg-green-100"
+                  className="border-green-300 text-green-800 hover:bg-green-100"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel

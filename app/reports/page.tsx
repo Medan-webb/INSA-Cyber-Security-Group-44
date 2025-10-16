@@ -136,7 +136,8 @@ export default function ReportsPage() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<Array<{ question: string, answer: string }>>([]);
 
-
+  const [pentestGoal, setPentestGoal] = useState("");
+  const [isGeneratingGoalCommands, setIsGeneratingGoalCommands] = useState(false);
   useEffect(() => {
     loadReportsData()
   }, [])
@@ -367,7 +368,7 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url)
   }
 
-   function exportSelectedMetedologyToJSON() {
+  function exportSelectedMetedologyToJSON() {
     const reportData = {
       generatedAt: new Date().toISOString(),
       aiAnalysis,
