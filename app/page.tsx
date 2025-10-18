@@ -1206,6 +1206,38 @@ Focus on commands that directly address: "${pentestGoal}"
     }
   }
 
+  const [quickNoteModal, setQuickNoteModal] = useState({
+    isOpen: false,
+    commandContext: "",
+    target: ""
+  });
+
+  // Add this function to create quick notes
+  async function createQuickNote(content, commandContext = "") {
+    if (!currentProject) return;
+
+    try {
+      const payload = {
+        project_id: currentProject.id,
+        target: currentProject.target,
+        content: content,
+        command_context: commandContext,
+        category: "quick"
+      };
+
+      await fetchJSON(`${apiBase}/api/quick-note`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      // Optional: Show success notification
+      console.log("Quick note created successfully");
+    } catch (error) {
+      console.error("Failed to create quick note", error);
+    }
+  }
+
 
   const CommandExplanationPreview = ({ explanation }: { explanation: CommandExplanation }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -1343,6 +1375,12 @@ Focus on commands that directly address: "${pentestGoal}"
                 <Button variant="ghost" className="w-full justify-start">
                   <Users className="h-4 w-4 mr-2" />
                   Community
+                </Button>
+              </Link>
+              <Link href="/notes" className="w-full">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Target Notes
                 </Button>
               </Link>
             </div>
@@ -2689,6 +2727,68 @@ Focus on commands that directly address: "${pentestGoal}"
                     </CardContent>
                   </Card>
 
+                  {quickNoteModal.isOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                          <h2 className="text-2xl font-semibold text-gray-900">Quick Note</h2>
+                          <button
+                            onClick={() => setQuickNoteModal({ isOpen: false, commandContext: "", target: "" })}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <X className="h-6 w-6" />
+                          </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Command Context
+                            </label>
+                            <Input
+                              value={quickNoteModal.commandContext}
+                              readOnly
+                              className="bg-gray-50 font-mono text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Note Content
+                            </label>
+                            <Textarea
+                              placeholder="Add your observations, findings, or next steps..."
+                              rows={6}
+                              className="w-full"
+                              id="quickNoteContent"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 p-6 border-t border-gray-200">
+                          <button
+                            onClick={() => setQuickNoteModal({ isOpen: false, commandContext: "", target: "" })}
+                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const content = document.getElementById('quickNoteContent').value;
+                              if (content.trim()) {
+                                await createQuickNote(content, quickNoteModal.commandContext);
+                                setQuickNoteModal({ isOpen: false, commandContext: "", target: "" });
+                              }
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Save Note
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Card className="shadow-lg border-2 border-gray-200/80 backdrop-blur-sm bg-white/95">
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -2696,11 +2796,29 @@ Focus on commands that directly address: "${pentestGoal}"
                           <Terminal className="h-5 w-5" />
                           Terminal Results
                         </CardTitle>
-                        {terminalOutput.length > 0 && (
-                          <Button size="sm" variant="outline" onClick={clearTerminalOutput}>
-                            Clear
-                          </Button>
-                        )}
+                        <div className="flex gap-2">
+                          {terminalOutput.length > 0 && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setQuickNoteModal({
+                                  isOpen: true,
+                                  commandContext: terminalOutput[terminalOutput.length - 1]?.command || "",
+                                  target: currentProject?.target || ""
+                                })}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Quick Note
+                              </Button>
+                              {terminalOutput.length > 0 && (
+                                <Button size="sm" variant="outline" onClick={clearTerminalOutput}>
+                                  Clear
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>

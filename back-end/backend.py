@@ -1,3 +1,4 @@
+
 # backend.py
 import os
 import json
@@ -33,7 +34,7 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-GEMINI_API_KEY = "AIzaSyCRwBoOyH94DLdpdlFDgKx6u_6T3GKBGnM"
+GEMINI_API_KEY = "my-key"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================
@@ -401,6 +402,68 @@ class AIChatRequest(BaseModel):
 class AIChatResponse(BaseModel):
     answer: str
     context_used: Dict[str, Any]
+
+class TargetNote(BaseModel):
+    id: int
+    project_id: int
+    target: str
+    title: str
+    content: str
+    created_at: float
+    updated_at: float
+
+class CreateNoteRequest(BaseModel):
+    project_id: int
+    target: str
+    title: str
+    content: str
+
+class UpdateNoteRequest(BaseModel):
+    title: str
+    content: str
+class EnhancedTargetNote(BaseModel):
+    id: int
+    project_id: int
+    target: str
+    title: str
+    content: str
+    category: str = "general"
+    tags: List[str] = []
+    severity: Optional[str] = None
+    status: str = "draft"  # draft, in_review, completed
+    related_findings: List[int] = []
+    command_context: Optional[str] = None
+    evidence_files: List[str] = []
+    created_at: float
+    updated_at: float
+    created_by: str = "user"
+
+class CreateEnhancedNoteRequest(BaseModel):
+    project_id: int
+    target: str
+    title: str
+    content: str
+    category: Optional[str] = "general"
+    tags: Optional[List[str]] = []
+    severity: Optional[str] = None
+    command_context: Optional[str] = None
+
+class UpdateEnhancedNoteRequest(BaseModel):
+    title: str
+    content: str
+    category: str
+    tags: List[str]
+    severity: Optional[str]
+    status: str
+
+class QuickNoteRequest(BaseModel):
+    project_id: int
+    target: str
+    content: str
+    command_context: Optional[str] = None
+    category: str = "quick"
+
+
 # ============================
 # Helper Functions
 # ============================
@@ -3272,8 +3335,209 @@ async def import_methodology(file: UploadFile = File(...)):
     except Exception as e:
         print(f"❌ Error importing methodology: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to import methodology: {str(e)}")
+# ========================
+# ==== NOTES +===========
+@app.get("/api/projects/{project_id}/target-notes")
+def get_target_notes(project_id: int):
+    """Get all notes for a specific project"""
+    notes = [note for note in db.get("target_notes", []) if note.get("project_id") == project_id]
+    return {"notes": notes}
 
+@app.get("/api/projects/{project_id}/target-notes/{target}")
+def get_notes_for_target(project_id: int, target: str):
+    """Get all notes for a specific target in a project"""
+    notes = [
+        note for note in db.get("target_notes", []) 
+        if note.get("project_id") == project_id and note.get("target") == target
+    ]
+    return {"notes": notes}
 
+@app.post("/api/target-notes")
+def create_target_note(request: CreateNoteRequest):
+    """Create a new note for a target"""
+    if "target_notes" not in db:
+        db["target_notes"] = []
+    
+    note_id = next_id(db["target_notes"])
+    timestamp = time.time()
+    
+    note = {
+        "id": note_id,
+        "project_id": request.project_id,
+        "target": request.target,
+        "title": request.title,
+        "content": request.content,
+        "created_at": timestamp,
+        "updated_at": timestamp
+    }
+    
+    db["target_notes"].append(note)
+    save_db(db)
+    
+    return {"ok": True, "note": note}
+
+@app.put("/api/target-notes/{note_id}")
+def update_target_note(note_id: int, request: UpdateNoteRequest):
+    """Update an existing note"""
+    for note in db.get("target_notes", []):
+        if note["id"] == note_id:
+            note["title"] = request.title
+            note["content"] = request.content
+            note["updated_at"] = time.time()
+            save_db(db)
+            return {"ok": True, "note": note}
+    
+    raise HTTPException(status_code=404, detail="Note not found")
+
+@app.delete("/api/target-notes/{note_id}")
+def delete_target_note(note_id: int):
+    """Delete a note"""
+    notes = db.get("target_notes", [])
+    for i, note in enumerate(notes):
+        if note["id"] == note_id:
+            del notes[i]
+            save_db(db)
+            return {"ok": True}
+    
+    raise HTTPException(status_code=404, detail="Note not found")
+
+@app.get("/api/enhanced-target-notes/{project_id}")
+def get_enhanced_target_notes(
+    project_id: int,
+    target: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    tag: Optional[str] = None
+):
+    """Get enhanced notes with filtering"""
+    notes = [note for note in db.get("enhanced_target_notes", []) 
+             if note.get("project_id") == project_id]
+    
+    # Apply filters
+    if target:
+        notes = [note for note in notes if note.get("target") == target]
+    if category:
+        notes = [note for note in notes if note.get("category") == category]
+    if status:
+        notes = [note for note in notes if note.get("status") == status]
+    if tag:
+        notes = [note for note in notes if tag in note.get("tags", [])]
+    
+    return {"notes": sorted(notes, key=lambda x: x.get("updated_at", 0), reverse=True)}
+
+@app.post("/api/enhanced-target-notes")
+def create_enhanced_note(request: CreateEnhancedNoteRequest):
+    """Create a new enhanced note"""
+    if "enhanced_target_notes" not in db:
+        db["enhanced_target_notes"] = []
+    
+    note_id = next_id(db["enhanced_target_notes"])
+    timestamp = time.time()
+    
+    note = {
+        "id": note_id,
+        "project_id": request.project_id,
+        "target": request.target,
+        "title": request.title,
+        "content": request.content,
+        "category": request.category or "general",
+        "tags": request.tags or [],
+        "severity": request.severity,
+        "status": "draft",
+        "related_findings": [],
+        "command_context": request.command_context,
+        "evidence_files": [],
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "created_by": "user"
+    }
+    
+    db["enhanced_target_notes"].append(note)
+    save_db(db)
+    
+    return {"ok": True, "note": note}
+
+@app.post("/api/quick-note")
+def create_quick_note(request: QuickNoteRequest):
+    """Create a quick note from command context"""
+    if "enhanced_target_notes" not in db:
+        db["enhanced_target_notes"] = []
+    
+    note_id = next_id(db["enhanced_target_notes"])
+    timestamp = time.time()
+    
+    # Generate title from content
+    title = request.content[:50] + "..." if len(request.content) > 50 else request.content
+    
+    note = {
+        "id": note_id,
+        "project_id": request.project_id,
+        "target": request.target,
+        "title": f"Quick Note: {title}",
+        "content": request.content,
+        "category": request.category,
+        "tags": ["quick-note"],
+        "status": "draft",
+        "command_context": request.command_context,
+        "evidence_files": [],
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "created_by": "user"
+    }
+    
+    db["enhanced_target_notes"].append(note)
+    save_db(db)
+    
+    return {"ok": True, "note": note}
+
+@app.put("/api/enhanced-target-notes/{note_id}")
+def update_enhanced_note(note_id: int, request: UpdateEnhancedNoteRequest):
+    """Update an enhanced note"""
+    for note in db.get("enhanced_target_notes", []):
+        if note["id"] == note_id:
+            note.update({
+                "title": request.title,
+                "content": request.content,
+                "category": request.category,
+                "tags": request.tags,
+                "severity": request.severity,
+                "status": request.status,
+                "updated_at": time.time()
+            })
+            save_db(db)
+            return {"ok": True, "note": note}
+    
+    raise HTTPException(status_code=404, detail="Note not found")
+
+@app.delete("/api/enhanced-target-notes/{note_id}")
+def delete_enhanced_note(note_id: int):
+    """Delete an enhanced note"""
+    notes = db.get("enhanced_target_notes", [])
+    for i, note in enumerate(notes):
+        if note["id"] == note_id:
+            del notes[i]
+            save_db(db)
+            return {"ok": True}
+    
+    raise HTTPException(status_code=404, detail="Note not found")
+
+@app.get("/api/note-categories/{project_id}")
+def get_note_categories(project_id: int):
+    """Get all categories used in project notes"""
+    notes = [note for note in db.get("enhanced_target_notes", []) 
+             if note.get("project_id") == project_id]
+    categories = list(set(note.get("category", "general") for note in notes))
+    return {"categories": categories}
+
+@app.get("/api/note-tags/{project_id}")
+def get_note_tags(project_id: int):
+    """Get all tags used in project notes"""
+    notes = [note for note in db.get("enhanced_target_notes", []) 
+             if note.get("project_id") == project_id]
+    all_tags = set()
+    for note in notes:
+        all_tags.update(note.get("tags", []))
+    return {"tags": list(all_tags)}
 # ============================
 # Health Check Endpoint
 # ============================
